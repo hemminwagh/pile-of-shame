@@ -1,94 +1,176 @@
 
-const STORAGE_KEY = "hobbycircle-v1";
+const STORAGE_KEY = "pile-of-shame-v2";
+const THEME_KEY = "pile-of-shame-theme";
+const SEEN_FATE_KEY = "pile-of-shame-seen-fate";
+
+const factions = [
+  { id:"orks", name:"Orks", universe:"40K", icon:"☠" },
+  { id:"adepta", name:"Adepta Sororitas", universe:"40K", icon:"✠" },
+  { id:"necrons", name:"Necrons", universe:"40K", icon:"◇" },
+  { id:"tyranids", name:"Tyranids", universe:"40K", icon:"⌁" },
+  { id:"aeldari", name:"Aeldari", universe:"40K", icon:"◬" },
+  { id:"chaos40k", name:"Chaos Space Marines", universe:"40K", icon:"✣" },
+  { id:"stormcast", name:"Stormcast Eternals", universe:"Sigmar", icon:"✦" },
+  { id:"gitz", name:"Gloomspite Gitz", universe:"Sigmar", icon:"☾" },
+  { id:"skaven-aos", name:"Skaven", universe:"Sigmar", icon:"⚙" },
+  { id:"soulblight", name:"Soulblight Gravelords", universe:"Sigmar", icon:"♜" },
+  { id:"nighthaunt", name:"Nighthaunt", universe:"Sigmar", icon:"♧" },
+  { id:"seraphon", name:"Seraphon", universe:"Sigmar", icon:"☀" },
+  { id:"bretonnia", name:"Bretonnia", universe:"Fantasy", icon:"⚜" },
+  { id:"empire", name:"Empire", universe:"Fantasy", icon:"♛" },
+  { id:"dwarfs", name:"Dwarfs", universe:"Fantasy", icon:"◆" },
+  { id:"high-elves", name:"High Elves", universe:"Fantasy", icon:"✧" },
+  { id:"orcs-goblins", name:"Orcs & Goblins", universe:"Fantasy", icon:"☠" },
+  { id:"vampires", name:"Vampire Counts", universe:"Fantasy", icon:"♜" },
+  { id:"tomb-kings", name:"Tomb Kings", universe:"Fantasy", icon:"☥" },
+  { id:"skaven-fantasy", name:"Skaven", universe:"Fantasy", icon:"⚙" },
+  { id:"none", name:"Sin favorita", universe:"—", icon:"·" }
+];
 
 const defaultState = {
   user: {
-    name: "Elena",
-    handle: "@elena",
-    bio: "Pintura, plástico y una pila de la vergüenza perfectamente controlada.",
+    name:"Elena",
+    handle:"@elena",
+    bio:"Pintura, plástico y decisiones financieras cuestionables.",
+    favoriteFaction:"orks",
+    avatarData:"",
+    bannerData:""
   },
-  collection: [
-    { id: crypto.randomUUID(), name: "Gretchin", faction: "Orks", status: "Pintado", cost: 18, emoji: "🟢" },
-    { id: crypto.randomUUID(), name: "Grifocorcel", faction: "Stormcast", status: "En proceso", cost: 32, emoji: "🪽" },
-    { id: crypto.randomUUID(), name: "Proyecto caja", faction: "Otros", status: "Pendiente", cost: 0, emoji: "📦" }
+  collection:[
+    {id:crypto.randomUUID(),name:"Gretchin",faction:"Orks",status:"Pintado",cost:18,emoji:"🟢"},
+    {id:crypto.randomUUID(),name:"Grifocorcel",faction:"Stormcast",status:"En proceso",cost:32,emoji:"🪽"},
+    {id:crypto.randomUUID(),name:"Proyecto caja",faction:"Otros",status:"Pendiente",cost:0,emoji:"📦"}
   ],
-  posts: [
-    { id: crypto.randomUUID(), author: "Laura", initials: "L", text: "He terminado por fin esta unidad. Tres tardes y una cantidad irresponsable de pinceles.", likes: 4, comments: 2, time: "Hace 32 min", emoji: "🎨" },
-    { id: crypto.randomUUID(), author: "Elena", initials: "E", text: "Probando esquema nuevo para los Gretchin. Creo que este verde se queda.", likes: 3, comments: 1, time: "Hace 2 h", emoji: "🟢" }
+  posts:[
+    {id:crypto.randomUUID(),author:"Laura",initials:"L",text:"He terminado por fin esta unidad. Tres tardes y una cantidad irresponsable de pinceles.",likes:4,comments:2,time:"Hace 32 min",emoji:"🎨"},
+    {id:crypto.randomUUID(),author:"Elena",initials:"E",text:"Probando esquema nuevo para los Gretchin. Creo que este verde se queda.",likes:3,comments:1,time:"Hace 2 h",emoji:"🟢"}
   ],
-  friends: [
-    { name: "Laura", handle: "@laura", info: "12 proyectos · 84 minis" },
-    { name: "Marta", handle: "@marta", info: "6 proyectos · 41 minis" },
-    { name: "Ana", handle: "@ana", info: "9 proyectos · 67 minis" },
-    { name: "Sara", handle: "@sara", info: "4 proyectos · 29 minis" }
+  friends:[
+    {name:"Laura",handle:"@laura",info:"12 proyectos · 84 minis",faction:"gitz"},
+    {name:"Marta",handle:"@marta",info:"6 proyectos · 41 minis",faction:"soulblight"},
+    {name:"Ana",handle:"@ana",info:"9 proyectos · 67 minis",faction:"bretonnia"},
+    {name:"Sara",handle:"@sara",info:"4 proyectos · 29 minis",faction:"adepta"}
   ]
 };
 
 let state = loadState();
 let route = "feed";
+let profileTab = "posts";
 
-function loadState() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || structuredClone(defaultState);
-  } catch {
-    return structuredClone(defaultState);
+function cloneDefault(){
+  return JSON.parse(JSON.stringify(defaultState));
+}
+function loadState(){
+  try{
+    const existing = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(!existing) return cloneDefault();
+    return {
+      ...cloneDefault(),
+      ...existing,
+      user:{...cloneDefault().user,...existing.user}
+    };
+  }catch{
+    return cloneDefault();
   }
 }
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function saveState(){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
 }
-function esc(str="") {
-  return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+function esc(value=""){
+  return String(value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 }
-function toast(message) {
-  const el = document.createElement("div");
-  el.className = "toast";
-  el.textContent = message;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 1800);
+function getTheme(){
+  return localStorage.getItem(THEME_KEY) || "40k";
 }
-function titleFor(r){
-  return ({feed:"Feed",collection:"Colección",add:"Añadir",community:"Comunidad",profile:"Perfil"})[r];
+function setTheme(theme, persist=true){
+  if(!["40k","sigmar","fantasy"].includes(theme)) theme="40k";
+  document.body.dataset.theme=theme;
+  if(persist) localStorage.setItem(THEME_KEY,theme);
+
+  const metas={
+    "40k":{sub:"HOBBY · COMUNIDAD · COLECCIÓN",themeColor:"#07131b"},
+    "sigmar":{sub:"HOBBY · REINOS · COMUNIDAD",themeColor:"#070c10"},
+    "fantasy":{sub:"HOBBY · LORE · COMUNIDAD",themeColor:"#17110c"}
+  };
+  document.getElementById("brandSub").textContent=metas[theme].sub;
+  document.querySelector('meta[name="theme-color"]').setAttribute("content",metas[theme].themeColor);
+
+  document.querySelectorAll("[data-quick-theme],[data-settings-theme]").forEach(btn=>{
+    const value=btn.dataset.quickTheme || btn.dataset.settingsTheme;
+    btn.classList.toggle("active",value===theme);
+  });
 }
-function setRoute(next){
-  route = next;
-  document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.route === route));
-  document.getElementById("screenTitle").textContent = titleFor(route);
+function openFateGate(){
+  const gate=document.getElementById("fateGate");
+  gate.classList.add("open");
+  gate.setAttribute("aria-hidden","false");
+}
+function closeFateGate(){
+  const gate=document.getElementById("fateGate");
+  gate.classList.remove("open");
+  gate.setAttribute("aria-hidden","true");
+}
+function pickTheme(theme){
+  setTheme(theme);
+  localStorage.setItem(SEEN_FATE_KEY,"yes");
+  closeFateGate();
   render();
-  window.scrollTo({top:0,behavior:"smooth"});
 }
-function collectionStats(){
-  const total = state.collection.length;
-  const painted = state.collection.filter(x => x.status === "Pintado").length;
-  const spent = state.collection.reduce((a,b) => a + Number(b.cost || 0), 0);
-  return { total, painted, spent };
+function currentFaction(){
+  return factions.find(f=>f.id===state.user.favoriteFaction) || factions.at(-1);
+}
+function avatarHTML(sizeClass="avatar"){
+  return state.user.avatarData
+    ? `<div class="${sizeClass}"><img src="${state.user.avatarData}" alt=""></div>`
+    : `<div class="${sizeClass}">${esc(state.user.name?.[0]?.toUpperCase() || "P")}</div>`;
+}
+function headerAvatar(){
+  const el=document.getElementById("headerAvatar");
+  if(state.user.avatarData){
+    el.innerHTML=`<img src="${state.user.avatarData}" alt="">`;
+  }else{
+    el.textContent=state.user.name?.[0]?.toUpperCase() || "P";
+  }
+}
+function toast(message){
+  const node=document.createElement("div");
+  node.textContent=message;
+  node.style.cssText="position:fixed;left:50%;bottom:100px;transform:translateX(-50%);z-index:200;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:999px;font-weight:900;box-shadow:var(--shadow)";
+  document.body.appendChild(node);
+  setTimeout(()=>node.remove(),1600);
 }
 
 function renderFeed(){
-  const {total, painted} = collectionStats();
   return `
     <section class="hero">
-      <span class="muted">Tu círculo de hobby</span>
-      <strong>Buenas, ${esc(state.user.name)}.</strong>
-      <p class="muted">Tienes ${painted} de ${total} piezas registradas como pintadas.</p>
-      <div class="progress"><span style="width:${total ? Math.round((painted/total)*100) : 0}%"></span></div>
+      <span class="micro-label">TU CÍRCULO</span>
+      <strong>La pila jamás disminuye.<br>Al menos ahora tiene feed.</strong>
+      <p>Proyectos, compras, pintura y pequeñas victorias contra el gris plástico.</p>
     </section>
 
-    <div class="section-title"><h2>Actividad reciente</h2><span class="meta">Grupo privado</span></div>
-    ${state.posts.map(p => `
-      <article class="card">
+    <div class="section-head">
+      <h2>Actividad reciente</h2>
+      <button data-route="community">Ver círculo</button>
+    </div>
+
+    ${state.posts.map(post=>`
+      <article class="card post-card">
         <div class="row">
-          <div class="avatar">${esc(p.initials)}</div>
+          <div class="avatar">${esc(post.initials)}</div>
           <div>
-            <strong>${esc(p.author)}</strong>
-            <div class="meta">${esc(p.time)}</div>
+            <div class="post-name">${esc(post.author)}</div>
+            <div class="meta">${esc(post.time)}</div>
           </div>
+          <button style="margin-left:auto;border:0;background:transparent;color:var(--muted)">•••</button>
         </div>
-        <div class="feed-photo">${esc(p.emoji)}</div>
-        <p>${esc(p.text)}</p>
-        <div class="actions">
-          <button class="pill like-btn" data-id="${p.id}">♡ ${p.likes}</button>
-          <button class="pill">💬 ${p.comments}</button>
+
+        <p class="post-text">${esc(post.text)}</p>
+        <div class="post-media">${esc(post.emoji)}</div>
+
+        <div class="post-actions">
+          <button class="like-btn" data-id="${post.id}">♡ <span>${post.likes}</span></button>
+          <button>▢ <span>${post.comments}</span></button>
+          <button class="save-action">◇</button>
         </div>
       </article>
     `).join("")}
@@ -96,39 +178,47 @@ function renderFeed(){
 }
 
 function renderCollection(){
+  const painted=state.collection.filter(x=>x.status==="Pintado").length;
   return `
-    <section class="grid-2">
-      <div class="card stat"><strong>${state.collection.length}</strong><span>Piezas</span></div>
-      <div class="card stat"><strong>${state.collection.filter(x=>x.status==="Pintado").length}</strong><span>Pintadas</span></div>
+    <section class="hero">
+      <span class="micro-label">MI COLECCIÓN</span>
+      <strong>${state.collection.length} piezas registradas.</strong>
+      <p>${painted} pintadas. El resto están “en proceso”, una expresión legalmente muy flexible.</p>
     </section>
 
-    <div class="section-title"><h2>Mi colección</h2><button class="pill" data-go="add">＋ Añadir</button></div>
+    <div class="section-head">
+      <h2>Colección</h2>
+      <button data-route="add">＋ Añadir</button>
+    </div>
+
     <section class="collection-grid">
-      ${state.collection.map(item => `
-        <article class="mini-card">
-          <div class="mini-thumb">${esc(item.emoji || "🎨")}</div>
-          <div class="mini-body">
+      ${state.collection.map(item=>`
+        <article class="collection-card">
+          <div class="thumb">${esc(item.emoji)}</div>
+          <div class="copy">
             <strong>${esc(item.name)}</strong>
-            <div class="meta">${esc(item.faction)}</div>
-            <div style="margin-top:8px"><span class="tag">${esc(item.status)}</span></div>
+            <span class="meta">${esc(item.faction)}</span>
+            <span class="tag">${esc(item.status)}</span>
           </div>
         </article>
-      `).join("") || `<div class="empty">Aún no has añadido nada.</div>`}
+      `).join("")}
     </section>
   `;
 }
 
 function renderAdd(){
   return `
-    <section class="card">
-      <h2>Añadir a colección</h2>
-      <p class="muted">Esta primera versión guarda todo localmente en este dispositivo.</p>
-      <form id="addForm" class="form">
+    <section class="form-card">
+      <span class="micro-label">COLECCIÓN</span>
+      <h2>Añadir pieza</h2>
+      <p>Registra una miniatura, caja o proyecto físico.</p>
+
+      <form id="addCollectionForm" class="form">
         <label>Nombre
-          <input name="name" placeholder="Ej. Gretchin Runtherd" required />
+          <input name="name" placeholder="Ej. Gretchin Runtherd" required>
         </label>
         <label>Facción / categoría
-          <input name="faction" placeholder="Ej. Orks" required />
+          <input name="faction" placeholder="Ej. Orks" required>
         </label>
         <label>Estado
           <select name="status">
@@ -140,22 +230,21 @@ function renderAdd(){
           </select>
         </label>
         <label>Coste (€)
-          <input name="cost" type="number" step="0.01" min="0" placeholder="0,00" />
+          <input name="cost" type="number" step="0.01" min="0" placeholder="0,00">
         </label>
-        <label>Notas
-          <textarea name="notes" placeholder="Pinturas, receta de color, ideas..."></textarea>
-        </label>
-        <button class="btn primary" type="submit">Guardar pieza</button>
+        <button class="primary-btn" type="submit">Guardar</button>
       </form>
     </section>
 
-    <section class="card">
-      <h3>Publicar en el feed</h3>
+    <section class="form-card">
+      <span class="micro-label">FEED</span>
+      <h2>Nueva publicación</h2>
+      <p>Comparte un avance con tu círculo.</p>
       <form id="postForm" class="form">
-        <label>¿Qué estás haciendo?
-          <textarea name="text" placeholder="He terminado..., estoy probando..., nueva compra..." required></textarea>
+        <label>Texto
+          <textarea name="text" placeholder="He terminado…, estoy probando…, nueva compra…" required></textarea>
         </label>
-        <button class="btn" type="submit">Publicar</button>
+        <button class="primary-btn" type="submit">Publicar</button>
       </form>
     </section>
   `;
@@ -164,147 +253,263 @@ function renderAdd(){
 function renderCommunity(){
   return `
     <section class="hero">
-      <span class="muted">Grupo privado</span>
-      <strong>5 personas</strong>
-      <p class="muted">Vuestro espacio para compartir proyectos, compras, avances y desgracias con pinceles.</p>
+      <span class="micro-label">MI CÍRCULO</span>
+      <strong>5 personas.</strong>
+      <p>Lo bastante pequeño para conocer a todo el mundo. Lo bastante grande para habilitar compras.</p>
     </section>
+
+    <div class="section-head"><h2>Miembros</h2><button>Invitar</button></div>
     <section class="card">
-      <h2>Miembros</h2>
-      ${[{name:state.user.name,handle:state.user.handle,info:"Tú"}, ...state.friends].map((f,i) => `
-        <div class="friend row">
-          <div class="avatar">${esc(f.name[0])}</div>
-          <div style="flex:1">
-            <strong>${esc(f.name)} ${i===0 ? '<span class="tag">Tú</span>' : ''}</strong>
-            <div class="meta">${esc(f.handle)} · ${esc(f.info)}</div>
+      ${[
+        {name:state.user.name,handle:state.user.handle,info:"Tú",faction:state.user.favoriteFaction,self:true},
+        ...state.friends
+      ].map(user=>{
+        const faction=factions.find(f=>f.id===user.faction) || factions.at(-1);
+        return `
+          <div class="community-user row">
+            <div class="avatar">${esc(user.name[0])}</div>
+            <div style="flex:1">
+              <div class="post-name">${esc(user.name)} ${user.self?'<span class="tag">Tú</span>':''}</div>
+              <div class="meta">${esc(user.handle)} · ${esc(user.info)}</div>
+            </div>
+            <div class="faction-sigil" title="${esc(faction.name)}">${esc(faction.icon)}</div>
           </div>
-          ${i ? '<button class="pill">Ver</button>' : ''}
-        </div>
-      `).join("")}
+        `;
+      }).join("")}
     </section>
   `;
 }
 
+function profileGallery(){
+  if(profileTab==="posts"){
+    return state.posts.filter(p=>p.author===state.user.name).map(p=>`<div class="gallery-item">${esc(p.emoji)}</div>`).join("")
+      || `<div class="empty-state">Aún no has publicado nada.</div>`;
+  }
+  if(profileTab==="collection"){
+    return state.collection.map(x=>`<div class="gallery-item">${esc(x.emoji)}</div>`).join("")
+      || `<div class="empty-state">Tu colección está vacía.</div>`;
+  }
+  if(profileTab==="projects"){
+    return `<div class="empty-state">Los proyectos llegan en la siguiente fase funcional.</div>`;
+  }
+  return `<div class="empty-state">Wishlist preparada para la siguiente fase funcional.</div>`;
+}
+
 function renderProfile(){
-  const s = collectionStats();
+  const faction=currentFaction();
+  const ownPosts=state.posts.filter(p=>p.author===state.user.name).length;
+  const bannerStyle=state.user.bannerData
+    ? `style="background-image:linear-gradient(180deg,transparent 52%,var(--bg)),url('${state.user.bannerData}')"`
+    : "";
+
   return `
-    <section class="card">
-      <div class="row">
-        <div class="avatar" style="width:64px;height:64px;font-size:1.4rem">${esc(state.user.name[0])}</div>
-        <div>
-          <h2 style="margin-bottom:3px">${esc(state.user.name)}</h2>
-          <div class="meta">${esc(state.user.handle)}</div>
+    <div class="profile-cover ${state.user.bannerData?"has-banner":""}" ${bannerStyle}></div>
+
+    <section class="profile-panel">
+      <div class="profile-top">
+        ${avatarHTML("profile-avatar")}
+        <button id="editProfileBtn" class="edit-btn">Editar perfil</button>
+      </div>
+
+      <h1 class="profile-name">${esc(state.user.name)}</h1>
+      <div class="profile-handle">${esc(state.user.handle)}</div>
+
+      <p class="profile-bio">${esc(state.user.bio)}</p>
+
+      <div class="faction-badge">
+        <div class="faction-sigil">${esc(faction.icon)}</div>
+        <div class="faction-copy">
+          <small>FACCIÓN FAVORITA · ${esc(faction.universe)}</small>
+          <strong>${esc(faction.name)}</strong>
         </div>
       </div>
-      <p style="margin-top:16px">${esc(state.user.bio)}</p>
-    </section>
 
-    <section class="grid-2">
-      <div class="card stat"><strong>${s.total}</strong><span>Colección</span></div>
-      <div class="card stat"><strong>${s.painted}</strong><span>Pintadas</span></div>
-      <div class="card stat"><strong>${s.spent.toFixed(2)} €</strong><span>Registrado</span></div>
-      <div class="card stat"><strong>${state.posts.filter(p=>p.author===state.user.name).length}</strong><span>Publicaciones</span></div>
-    </section>
-
-    <section class="card">
-      <h3>Datos</h3>
-      <p class="muted">Puedes exportar una copia de esta versión local y restaurarla después.</p>
-      <div class="actions">
-        <button id="exportBtn" class="btn">Exportar copia</button>
-        <label class="btn ghost" style="cursor:pointer">
-          Importar
-          <input id="importInput" type="file" accept="application/json" hidden />
-        </label>
+      <div class="profile-stats">
+        <div class="profile-stat"><strong>${ownPosts}</strong><span>Publicaciones</span></div>
+        <div class="profile-stat"><strong>${state.collection.length}</strong><span>Colección</span></div>
+        <div class="profile-stat"><strong>${state.friends.length}</strong><span>Círculo</span></div>
       </div>
+
+      <div class="profile-tabs">
+        <button class="profile-tab ${profileTab==="posts"?"active":""}" data-profile-tab="posts">Publicaciones</button>
+        <button class="profile-tab ${profileTab==="collection"?"active":""}" data-profile-tab="collection">Colección</button>
+        <button class="profile-tab ${profileTab==="projects"?"active":""}" data-profile-tab="projects">Proyectos</button>
+        <button class="profile-tab ${profileTab==="wishlist"?"active":""}" data-profile-tab="wishlist">Wishlist</button>
+      </div>
+
+      <div class="gallery">${profileGallery()}</div>
     </section>
   `;
 }
 
 function render(){
-  const app = document.getElementById("app");
-  app.innerHTML = ({
-    feed: renderFeed,
-    collection: renderCollection,
-    add: renderAdd,
-    community: renderCommunity,
-    profile: renderProfile
-  })[route]();
+  const app=document.getElementById("app");
+  app.innerHTML={
+    feed:renderFeed,
+    collection:renderCollection,
+    add:renderAdd,
+    community:renderCommunity,
+    profile:renderProfile
+  }[route]();
 
-  bindDynamicEvents();
-}
+  document.querySelectorAll("[data-route]").forEach(btn=>{
+    btn.addEventListener("click",()=>setRoute(btn.dataset.route));
+  });
 
-function bindDynamicEvents(){
-  document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => setRoute(b.dataset.go)));
+  document.querySelectorAll(".like-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const post=state.posts.find(p=>p.id===btn.dataset.id);
+      if(!post) return;
+      post.likes++;
+      saveState();
+      render();
+    });
+  });
 
-  document.querySelectorAll(".like-btn").forEach(btn => btn.addEventListener("click", () => {
-    const p = state.posts.find(x => x.id === btn.dataset.id);
-    if (p) { p.likes++; saveState(); render(); }
-  }));
-
-  document.getElementById("addForm")?.addEventListener("submit", e => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+  document.getElementById("addCollectionForm")?.addEventListener("submit",event=>{
+    event.preventDefault();
+    const fd=new FormData(event.currentTarget);
     state.collection.unshift({
-      id: crypto.randomUUID(),
-      name: fd.get("name"),
-      faction: fd.get("faction"),
-      status: fd.get("status"),
-      cost: Number(fd.get("cost") || 0),
-      notes: fd.get("notes"),
-      emoji: "🎨"
+      id:crypto.randomUUID(),
+      name:fd.get("name"),
+      faction:fd.get("faction"),
+      status:fd.get("status"),
+      cost:Number(fd.get("cost")||0),
+      emoji:"🎨"
     });
     saveState();
-    toast("Guardado");
+    toast("Añadido a tu pila");
     setRoute("collection");
   });
 
-  document.getElementById("postForm")?.addEventListener("submit", e => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+  document.getElementById("postForm")?.addEventListener("submit",event=>{
+    event.preventDefault();
+    const fd=new FormData(event.currentTarget);
     state.posts.unshift({
-      id: crypto.randomUUID(),
-      author: state.user.name,
-      initials: state.user.name[0].toUpperCase(),
-      text: fd.get("text"),
-      likes: 0,
-      comments: 0,
-      time: "Ahora",
-      emoji: "✨"
+      id:crypto.randomUUID(),
+      author:state.user.name,
+      initials:state.user.name[0]?.toUpperCase()||"P",
+      text:fd.get("text"),
+      likes:0,
+      comments:0,
+      time:"Ahora",
+      emoji:"✨"
     });
     saveState();
     toast("Publicado");
     setRoute("feed");
   });
 
-  document.getElementById("exportBtn")?.addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `hobbycircle-backup-${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  });
+  document.getElementById("editProfileBtn")?.addEventListener("click",openProfileEditor);
 
-  document.getElementById("importInput")?.addEventListener("change", async e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const imported = JSON.parse(await file.text());
-      state = imported;
-      saveState();
-      toast("Copia restaurada");
+  document.querySelectorAll("[data-profile-tab]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      profileTab=btn.dataset.profileTab;
       render();
-    } catch {
-      toast("Archivo no válido");
-    }
+    });
+  });
+
+  headerAvatar();
+  syncNav();
+}
+
+function syncNav(){
+  document.querySelectorAll(".bottom-nav .nav-item").forEach(btn=>{
+    btn.classList.toggle("active",btn.dataset.route===route);
+  });
+}
+function setRoute(next){
+  route=next;
+  render();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function populateFactionSelect(){
+  const select=document.getElementById("favoriteFactionSelect");
+  select.innerHTML = ["40K","Sigmar","Fantasy","—"].map(universe=>{
+    const options=factions.filter(f=>f.universe===universe)
+      .map(f=>`<option value="${f.id}">${f.name}</option>`).join("");
+    return `<optgroup label="${universe}">${options}</optgroup>`;
+  }).join("");
+}
+function openProfileEditor(){
+  const dialog=document.getElementById("editProfileDialog");
+  const form=document.getElementById("profileForm");
+  form.elements.name.value=state.user.name;
+  form.elements.handle.value=state.user.handle;
+  form.elements.bio.value=state.user.bio;
+  form.elements.favoriteFaction.value=state.user.favoriteFaction;
+  dialog.showModal();
+}
+function fileToDataURL(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
   });
 }
 
-document.querySelectorAll(".nav-item").forEach(btn => btn.addEventListener("click", () => setRoute(btn.dataset.route)));
-document.getElementById("notifBtn").addEventListener("click", () => document.getElementById("notificationsDialog").showModal());
-document.querySelectorAll("[data-close]").forEach(btn => btn.addEventListener("click", () => document.getElementById(btn.dataset.close).close()));
+document.getElementById("notifBtn").addEventListener("click",()=>{
+  document.getElementById("notificationsDialog").showModal();
+});
+document.getElementById("settingsBtn").addEventListener("click",()=>{
+  document.getElementById("settingsDialog").showModal();
+  setTheme(getTheme(),false);
+});
+document.querySelectorAll("[data-close]").forEach(btn=>{
+  btn.addEventListener("click",()=>document.getElementById(btn.dataset.close).close());
+});
+document.querySelectorAll("[data-pick-theme]").forEach(btn=>{
+  btn.addEventListener("click",()=>pickTheme(btn.dataset.pickTheme));
+});
+document.querySelectorAll("[data-quick-theme]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    setTheme(btn.dataset.quickTheme);
+    render();
+  });
+});
+document.querySelectorAll("[data-settings-theme]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    setTheme(btn.dataset.settingsTheme);
+    render();
+  });
+});
+document.getElementById("showFateAgain").addEventListener("click",()=>{
+  document.getElementById("settingsDialog").close();
+  openFateGate();
+});
+document.getElementById("profileForm").addEventListener("submit",async event=>{
+  event.preventDefault();
+  const form=event.currentTarget;
+  const fd=new FormData(form);
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.error));
-}
+  state.user.name=String(fd.get("name")||"").trim();
+  state.user.handle=String(fd.get("handle")||"").trim();
+  state.user.bio=String(fd.get("bio")||"").trim();
+  state.user.favoriteFaction=String(fd.get("favoriteFaction")||"none");
+
+  const avatarFile=form.elements.avatarFile.files?.[0];
+  const bannerFile=form.elements.bannerFile.files?.[0];
+  if(avatarFile) state.user.avatarData=await fileToDataURL(avatarFile);
+  if(bannerFile) state.user.bannerData=await fileToDataURL(bannerFile);
+
+  saveState();
+  document.getElementById("editProfileDialog").close();
+  toast("Perfil actualizado");
+  render();
+});
+
+populateFactionSelect();
+setTheme(getTheme(),false);
 render();
+
+if(!localStorage.getItem(SEEN_FATE_KEY)){
+  openFateGate();
+}
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  });
+}

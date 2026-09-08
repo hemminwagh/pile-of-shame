@@ -1,56 +1,69 @@
-# HobbyCircle — Fase 1
+# PILE OF SHAME — Identidad visual V2
 
-Primera base funcional de una PWA para coleccionismo, pintura y comunidad privada.
+Prototipo visual funcional de la PWA.
 
-## Qué incluye ahora
-- Feed de actividad.
-- Colección personal.
-- Añadir piezas.
-- Publicar en el feed.
-- Comunidad de 5 personas de demostración.
-- Perfil y estadísticas básicas.
-- Guardado local en el dispositivo mediante localStorage.
-- Exportar/importar copia de seguridad JSON.
-- PWA instalable.
-- Service Worker para funcionamiento offline básico.
-- Preparada para conectar Supabase en la siguiente fase.
+## Incluye
+
+- Pantalla inicial **ELIGE TU SINO**.
+- Tres temas intercambiables:
+  - **40K** — industrial / azul oscuro / cian.
+  - **SIGMAR** — negro azulado / oro.
+  - **FANTASY** — pergamino oscuro / borgoña / oro viejo.
+- Logo tipográfico PILE OF SHAME adaptado a cada tema.
+- Feed rediseñado.
+- Barra inferior rediseñada.
+- Botón central de añadir diferenciado por tema.
+- Perfil con:
+  - foto,
+  - banner,
+  - nombre,
+  - usuario,
+  - biografía,
+  - una facción favorita general,
+  - badge de facción,
+  - pestañas Publicaciones / Colección / Proyectos / Wishlist.
+- Editor de perfil funcional.
+- Selector de tema rápido y desde Ajustes.
+- Colección y creación de publicaciones del prototipo anterior.
+- Datos guardados localmente en el dispositivo.
+- PWA instalable y shell offline.
+
+## Nota sobre logos
+
+Los logos actuales están construidos tipográficamente y con CSS para poder probar
+ya proporciones, presencia y comportamiento en los tres temas. Cuando demos por
+buena la dirección, se sustituyen por los tres assets de logo finales sin tocar
+la estructura de la app.
 
 ## Probar en Windows
-La PWA necesita servirse por HTTP/HTTPS para que funcione el Service Worker.
 
-### Opción rápida con Python
-1. Abre una terminal dentro de esta carpeta.
-2. Ejecuta:
-   `python -m http.server 8080`
-3. Abre:
-   `http://localhost:8080`
+Desde esta carpeta:
 
-### Opción GitHub Pages
-1. Crea un repositorio nuevo en GitHub.
-2. Sube todo el contenido de esta carpeta a la raíz.
-3. En Settings → Pages, elige Deploy from a branch.
-4. Selecciona `main` y `/root`.
-5. Guarda.
-6. GitHub te dará la URL pública de la PWA.
+```bash
+python -m http.server 8080
+```
 
-## Instalar en iPhone
-1. Abre la URL en Safari.
-2. Compartir.
-3. Añadir a pantalla de inicio.
-4. Ábrela desde el icono.
+Después abre:
 
-## Instalar en Android
-1. Abre la URL en Chrome.
-2. Menú.
-3. Instalar aplicación / Añadir a pantalla de inicio.
+```text
+http://localhost:8080
+```
 
-## Siguiente fase recomendada
-- Supabase Auth.
-- Usuarios reales.
-- Datos separados por usuario.
-- Feed compartido.
-- Comentarios y reacciones reales.
-- Fotos.
-- Grupo privado.
-- Privacidad por publicación.
-- Notificaciones push.
+## GitHub Pages
+
+Sube el contenido de esta carpeta a la raíz de un repositorio y activa:
+
+Settings → Pages → Deploy from a branch → main → /root
+
+## Próximo paso recomendado
+
+Cerrar esta dirección visual contigo y después conectar Supabase:
+
+1. Auth real.
+2. Perfiles reales.
+3. Grupo privado.
+4. Colecciones por usuario.
+5. Feed compartido.
+6. Comentarios y reacciones.
+7. Fotos.
+8. Notificaciones.
