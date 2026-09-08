@@ -88,11 +88,23 @@ function setTheme(theme, persist=true){
   if(persist) localStorage.setItem(THEME_KEY,theme);
 
   const metas={
-    "40k":{sub:"HOBBY · COMUNIDAD · COLECCIÓN",themeColor:"#07131b"},
-    "sigmar":{sub:"HOBBY · REINOS · COMUNIDAD",themeColor:"#070c10"},
-    "fantasy":{sub:"HOBBY · LORE · COMUNIDAD",themeColor:"#17110c"}
+    "40k":{
+      themeColor:"#07131b",
+      logo:"./assets/logo-40k.png"
+    },
+    "sigmar":{
+      themeColor:"#070c10",
+      logo:"./assets/logo-sigmar.png"
+    },
+    "fantasy":{
+      themeColor:"#17110c",
+      logo:"./assets/logo-fantasy.png"
+    }
   };
-  document.getElementById("brandSub").textContent=metas[theme].sub;
+
+  const brandLogo=document.getElementById("brandLogo");
+  if(brandLogo) brandLogo.src=metas[theme].logo;
+
   document.querySelector('meta[name="theme-color"]').setAttribute("content",metas[theme].themeColor);
 
   document.querySelectorAll("[data-quick-theme],[data-settings-theme]").forEach(btn=>{
