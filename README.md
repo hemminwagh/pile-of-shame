@@ -1,4 +1,4 @@
-# PILE OF SHAME — Identidad visual V6
+# PILE OF SHAME — Identidad visual V7
 
 Prototipo visual funcional de la PWA.
 
@@ -92,3 +92,17 @@ Correspondencia:
 - 40K → logo metálico azul
 - Sigmar → logo dorado
 - Fantasy → logo pergamino rojo
+
+
+## Cambios V7
+
+- Logos del encabezado algo más grandes.
+- Inicio abre directamente en Actividad; eliminado el bloque explicativo superior.
+- Colección abre directamente en el contenido; eliminado el bloque explicativo superior.
+- Comunidad abre directamente en los miembros; eliminado el bloque explicativo superior.
+- Perfil se mantiene como estaba.
+- Añadir se reorganiza en tres desplegables:
+  1. Miniatura.
+  2. Material de hobby (pintura, pincel, herramienta u otro).
+  3. Nueva publicación.
+- Los materiales añadidos aparecen también en la colección con su tipo indicado.

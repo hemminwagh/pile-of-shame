@@ -761,3 +761,192 @@ body[data-theme="fantasy"] .brand-logo{
     margin:0 auto 8px;
   }
 }
+
+
+/* =========================================================
+   V7 — LIMPIEZA DE PANTALLAS + AÑADIR EN DESPLEGABLES
+   ========================================================= */
+
+/* Logo algo más grande */
+.brand-logo-button{
+  height:92px;
+}
+.brand-logo{
+  max-width:min(100%,430px);
+  height:88px;
+}
+body[data-theme="40k"] .brand-logo{
+  height:86px;
+  max-width:410px;
+}
+body[data-theme="sigmar"] .brand-logo{
+  height:84px;
+  max-width:415px;
+}
+body[data-theme="fantasy"] .brand-logo{
+  height:90px;
+  max-width:430px;
+}
+
+/* Eliminar el espacio que antes ocupaban los hero explicativos */
+.content{
+  padding-top:10px;
+}
+
+/* Encabezados de sección más directos */
+.screen-intro{
+  display:flex;
+  align-items:end;
+  justify-content:space-between;
+  gap:12px;
+  margin:4px 2px 14px;
+}
+.screen-intro h1{
+  margin:0;
+  font-family:var(--display-font);
+  font-size:1.45rem;
+}
+.screen-intro p{
+  margin:3px 0 0;
+  color:var(--muted);
+  font-size:.76rem;
+}
+
+/* Acordeones de la pantalla Añadir */
+.add-stack{
+  display:grid;
+  gap:10px;
+}
+
+.add-accordion{
+  border:1px solid var(--line);
+  background:var(--surface);
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:0 8px 26px rgba(0,0,0,.16);
+}
+
+body[data-theme="fantasy"] .add-accordion{
+  border-radius:6px;
+}
+
+.add-accordion summary{
+  list-style:none;
+  cursor:pointer;
+  display:grid;
+  grid-template-columns:46px 1fr auto;
+  align-items:center;
+  gap:11px;
+  min-height:72px;
+  padding:12px 14px;
+  user-select:none;
+  background:
+    linear-gradient(135deg,color-mix(in srgb,var(--accent) 7%,transparent),transparent 58%);
+}
+
+.add-accordion summary::-webkit-details-marker{
+  display:none;
+}
+
+.add-accordion[open] summary{
+  border-bottom:1px solid var(--line);
+}
+
+.add-summary-icon{
+  width:42px;
+  height:42px;
+  border:1px solid color-mix(in srgb,var(--accent) 75%,var(--line));
+  border-radius:10px;
+  display:grid;
+  place-items:center;
+  color:var(--accent-2);
+  background:color-mix(in srgb,var(--accent) 8%,var(--surface-2));
+  font-size:1.25rem;
+}
+
+.add-summary-copy{
+  display:grid;
+  gap:2px;
+}
+.add-summary-copy strong{
+  font-family:var(--display-font);
+  font-size:1rem;
+}
+.add-summary-copy small{
+  color:var(--muted);
+  font-size:.7rem;
+}
+
+.add-chevron{
+  color:var(--accent);
+  font-size:1.1rem;
+  transition:transform .16s ease;
+}
+.add-accordion[open] .add-chevron{
+  transform:rotate(180deg);
+}
+
+.add-accordion-body{
+  padding:14px;
+}
+
+/* Materiales / consumibles */
+.material-type-row{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;
+}
+
+.material-type-option{
+  position:relative;
+}
+.material-type-option input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.material-type-option span{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-height:44px;
+  padding:9px 10px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--surface-2);
+  color:var(--muted);
+  cursor:pointer;
+  font-size:.75rem;
+}
+.material-type-option input:checked + span{
+  border-color:var(--accent);
+  color:var(--accent-2);
+  background:color-mix(in srgb,var(--accent) 10%,var(--surface-2));
+}
+
+/* Tarjetas de colección con clase de tipo */
+.item-kind{
+  display:inline-flex;
+  margin-top:6px;
+  margin-right:4px;
+  padding:3px 6px;
+  border-radius:999px;
+  border:1px solid color-mix(in srgb,var(--line) 85%,transparent);
+  color:var(--muted);
+  font-size:.56rem;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+@media(max-width:620px){
+  .brand-logo-button{
+    height:74px;
+  }
+  .brand-logo{
+    max-width:292px !important;
+    height:68px !important;
+  }
+  .material-type-row{
+    grid-template-columns:1fr 1fr;
+  }
+}

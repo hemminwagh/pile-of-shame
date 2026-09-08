@@ -37,9 +37,9 @@ const defaultState = {
     bannerData:""
   },
   collection:[
-    {id:crypto.randomUUID(),name:"Gretchin",faction:"Orks",status:"Pintado",cost:18,emoji:"🟢"},
-    {id:crypto.randomUUID(),name:"Grifocorcel",faction:"Stormcast",status:"En proceso",cost:32,emoji:"🪽"},
-    {id:crypto.randomUUID(),name:"Proyecto caja",faction:"Otros",status:"Pendiente",cost:0,emoji:"📦"}
+    {id:crypto.randomUUID(),kind:"mini",name:"Gretchin",faction:"Orks",status:"Pintado",cost:18,emoji:"🟢"},
+    {id:crypto.randomUUID(),kind:"mini",name:"Grifocorcel",faction:"Stormcast",status:"En proceso",cost:32,emoji:"🪽"},
+    {id:crypto.randomUUID(),kind:"mini",name:"Proyecto caja",faction:"Otros",status:"Pendiente",cost:0,emoji:"📦"}
   ],
   posts:[
     {id:crypto.randomUUID(),author:"Laura",initials:"L",text:"He terminado por fin esta unidad. Tres tardes y una cantidad irresponsable de pinceles.",likes:4,comments:2,time:"Hace 32 min",emoji:"🎨"},
@@ -155,15 +155,12 @@ function toast(message){
 
 function renderFeed(){
   return `
-    <section class="hero">
-      <span class="micro-label">TU CÍRCULO</span>
-      <strong>La pila jamás disminuye.<br>Al menos ahora tiene feed.</strong>
-      <p>Proyectos, compras, pintura y pequeñas victorias contra el gris plástico.</p>
-    </section>
-
-    <div class="section-head">
-      <h2>Actividad reciente</h2>
-      <button data-route="community">Ver círculo</button>
+    <div class="screen-intro">
+      <div>
+        <span class="micro-label">INICIO</span>
+        <h1>Actividad</h1>
+      </div>
+      <button style="border:0;background:transparent;color:var(--accent-2);cursor:pointer" data-route="community">Mi círculo</button>
     </div>
 
     ${state.posts.map(post=>`
@@ -193,25 +190,26 @@ function renderFeed(){
 function renderCollection(){
   const painted=state.collection.filter(x=>x.status==="Pintado").length;
   return `
-    <section class="hero">
-      <span class="micro-label">MI COLECCIÓN</span>
-      <strong>${state.collection.length} piezas registradas.</strong>
-      <p>${painted} pintadas. El resto están “en proceso”, una expresión legalmente muy flexible.</p>
-    </section>
-
-    <div class="section-head">
-      <h2>Colección</h2>
-      <button data-route="add">＋ Añadir</button>
+    <div class="screen-intro">
+      <div>
+        <span class="micro-label">MI COLECCIÓN</span>
+        <h1>Colección</h1>
+        <p>${state.collection.length} elementos · ${painted} pintados</p>
+      </div>
+      <button style="border:0;background:transparent;color:var(--accent-2);cursor:pointer" data-route="add">＋ Añadir</button>
     </div>
 
     <section class="collection-grid">
       ${state.collection.map(item=>`
         <article class="collection-card">
-          <div class="thumb">${esc(item.emoji)}</div>
+          <div class="thumb">${esc(item.emoji || (item.kind==="material" ? "🖌️" : "🎨"))}</div>
           <div class="copy">
             <strong>${esc(item.name)}</strong>
-            <span class="meta">${esc(item.faction)}</span>
-            <span class="tag">${esc(item.status)}</span>
+            <span class="meta">${esc(item.faction || item.category || "Hobby")}</span>
+            <div>
+              <span class="item-kind">${item.kind==="material" ? "Material" : "Miniatura"}</span>
+              ${item.status ? `<span class="tag">${esc(item.status)}</span>` : ""}
+            </div>
           </div>
         </article>
       `).join("")}
@@ -221,57 +219,134 @@ function renderCollection(){
 
 function renderAdd(){
   return `
-    <section class="form-card">
-      <span class="micro-label">COLECCIÓN</span>
-      <h2>Añadir pieza</h2>
-      <p>Registra una miniatura, caja o proyecto físico.</p>
+    <div class="screen-intro">
+      <div>
+        <span class="micro-label">AÑADIR</span>
+        <h1>¿Qué entra hoy en la pila?</h1>
+      </div>
+    </div>
 
-      <form id="addCollectionForm" class="form">
-        <label>Nombre
-          <input name="name" placeholder="Ej. Gretchin Runtherd" required>
-        </label>
-        <label>Facción / categoría
-          <input name="faction" placeholder="Ej. Orks" required>
-        </label>
-        <label>Estado
-          <select name="status">
-            <option>Pendiente</option>
-            <option>Montado</option>
-            <option>Imprimado</option>
-            <option>En proceso</option>
-            <option>Pintado</option>
-          </select>
-        </label>
-        <label>Coste (€)
-          <input name="cost" type="number" step="0.01" min="0" placeholder="0,00">
-        </label>
-        <button class="primary-btn" type="submit">Guardar</button>
-      </form>
-    </section>
+    <section class="add-stack">
 
-    <section class="form-card">
-      <span class="micro-label">FEED</span>
-      <h2>Nueva publicación</h2>
-      <p>Comparte un avance con tu círculo.</p>
-      <form id="postForm" class="form">
-        <label>Texto
-          <textarea name="text" placeholder="He terminado…, estoy probando…, nueva compra…" required></textarea>
-        </label>
-        <button class="primary-btn" type="submit">Publicar</button>
-      </form>
+      <details class="add-accordion" name="add-type">
+        <summary>
+          <span class="add-summary-icon">⚔</span>
+          <span class="add-summary-copy">
+            <strong>Miniatura</strong>
+            <small>Mini, unidad, caja o pieza de colección</small>
+          </span>
+          <span class="add-chevron">⌄</span>
+        </summary>
+
+        <div class="add-accordion-body">
+          <form id="addCollectionForm" class="form">
+            <label>Nombre
+              <input name="name" placeholder="Ej. Gretchin Runtherd" required>
+            </label>
+            <label>Facción / categoría
+              <input name="faction" placeholder="Ej. Orks" required>
+            </label>
+            <label>Estado
+              <select name="status">
+                <option>Pendiente</option>
+                <option>Montado</option>
+                <option>Imprimado</option>
+                <option>En proceso</option>
+                <option>Pintado</option>
+              </select>
+            </label>
+            <label>Coste (€)
+              <input name="cost" type="number" step="0.01" min="0" placeholder="0,00">
+            </label>
+            <button class="primary-btn" type="submit">Guardar miniatura</button>
+          </form>
+        </div>
+      </details>
+
+      <details class="add-accordion" name="add-type">
+        <summary>
+          <span class="add-summary-icon">🖌</span>
+          <span class="add-summary-copy">
+            <strong>Material de hobby</strong>
+            <small>Pinturas, pinceles, herramientas y otros consumibles</small>
+          </span>
+          <span class="add-chevron">⌄</span>
+        </summary>
+
+        <div class="add-accordion-body">
+          <form id="addMaterialForm" class="form">
+            <label>Tipo</label>
+            <div class="material-type-row">
+              <label class="material-type-option">
+                <input type="radio" name="category" value="Pintura" checked>
+                <span>🎨 Pintura</span>
+              </label>
+              <label class="material-type-option">
+                <input type="radio" name="category" value="Pincel">
+                <span>🖌 Pincel</span>
+              </label>
+              <label class="material-type-option">
+                <input type="radio" name="category" value="Herramienta">
+                <span>🛠 Herramienta</span>
+              </label>
+              <label class="material-type-option">
+                <input type="radio" name="category" value="Otro">
+                <span>📦 Otro</span>
+              </label>
+            </div>
+
+            <label>Nombre
+              <input name="name" placeholder="Ej. Nuln Oil" required>
+            </label>
+            <label>Marca
+              <input name="brand" placeholder="Ej. Citadel">
+            </label>
+            <label>Cantidad
+              <input name="quantity" type="number" min="1" value="1">
+            </label>
+            <label>Coste (€)
+              <input name="cost" type="number" step="0.01" min="0" placeholder="0,00">
+            </label>
+            <button class="primary-btn" type="submit">Guardar material</button>
+          </form>
+        </div>
+      </details>
+
+      <details class="add-accordion" name="add-type">
+        <summary>
+          <span class="add-summary-icon">✦</span>
+          <span class="add-summary-copy">
+            <strong>Nueva publicación</strong>
+            <small>Comparte un avance, compra o proyecto con tu círculo</small>
+          </span>
+          <span class="add-chevron">⌄</span>
+        </summary>
+
+        <div class="add-accordion-body">
+          <form id="postForm" class="form">
+            <label>Texto
+              <textarea name="text" placeholder="He terminado…, estoy probando…, nueva compra…" required></textarea>
+            </label>
+            <button class="primary-btn" type="submit">Publicar</button>
+          </form>
+        </div>
+      </details>
+
     </section>
   `;
 }
 
 function renderCommunity(){
   return `
-    <section class="hero">
-      <span class="micro-label">MI CÍRCULO</span>
-      <strong>5 personas.</strong>
-      <p>Lo bastante pequeño para conocer a todo el mundo. Lo bastante grande para habilitar compras.</p>
-    </section>
+    <div class="screen-intro">
+      <div>
+        <span class="micro-label">COMUNIDAD</span>
+        <h1>Mi círculo</h1>
+        <p>5 miembros</p>
+      </div>
+      <button style="border:0;background:transparent;color:var(--accent-2);cursor:pointer">Invitar</button>
+    </div>
 
-    <div class="section-head"><h2>Miembros</h2><button>Invitar</button></div>
     <section class="card">
       ${[
         {name:state.user.name,handle:state.user.handle,info:"Tú",faction:state.user.favoriteFaction,self:true},
@@ -384,6 +459,7 @@ function render(){
     const fd=new FormData(event.currentTarget);
     state.collection.unshift({
       id:crypto.randomUUID(),
+      kind:"mini",
       name:fd.get("name"),
       faction:fd.get("faction"),
       status:fd.get("status"),
@@ -392,6 +468,32 @@ function render(){
     });
     saveState();
     toast("Añadido a tu pila");
+    setRoute("collection");
+  });
+
+  document.getElementById("addMaterialForm")?.addEventListener("submit",event=>{
+    event.preventDefault();
+    const fd=new FormData(event.currentTarget);
+    const category=String(fd.get("category")||"Otro");
+    const emojiMap={
+      "Pintura":"🎨",
+      "Pincel":"🖌️",
+      "Herramienta":"🛠️",
+      "Otro":"📦"
+    };
+    state.collection.unshift({
+      id:crypto.randomUUID(),
+      kind:"material",
+      name:fd.get("name"),
+      category,
+      faction:String(fd.get("brand")||"").trim() || category,
+      brand:String(fd.get("brand")||"").trim(),
+      quantity:Number(fd.get("quantity")||1),
+      cost:Number(fd.get("cost")||0),
+      emoji:emojiMap[category] || "📦"
+    });
+    saveState();
+    toast("Material añadido");
     setRoute("collection");
   });
 
