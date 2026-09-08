@@ -704,3 +704,60 @@ body[data-theme="fantasy"] .brand-logo{
     margin:0 auto 10px;
   }
 }
+
+
+/* =========================================================
+   V6 — USER-SUPPLIED HEADER LOGOS
+   ========================================================= */
+
+.brand-logo-button{
+  height:82px;
+}
+
+.brand-logo{
+  max-width:min(100%,390px);
+  height:78px;
+  object-fit:contain;
+  object-position:center;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));
+}
+
+body[data-theme="40k"] .brand-logo{
+  height:76px;
+  max-width:370px;
+}
+
+body[data-theme="sigmar"] .brand-logo{
+  height:74px;
+  max-width:372px;
+}
+
+body[data-theme="fantasy"] .brand-logo{
+  height:78px;
+  max-width:388px;
+}
+
+.fate-logo{
+  width:min(98%,390px);
+  max-height:120px;
+  object-fit:contain;
+  object-position:center;
+  margin:0 auto 12px;
+}
+
+@media(max-width:620px){
+  .brand-logo-button{
+    height:66px;
+  }
+
+  .brand-logo{
+    max-width:265px !important;
+    height:60px !important;
+  }
+
+  .fate-logo{
+    width:min(92%,290px);
+    max-height:88px;
+    margin:0 auto 8px;
+  }
+}

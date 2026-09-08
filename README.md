@@ -1,4 +1,4 @@
-# PILE OF SHAME — Identidad visual V5
+# PILE OF SHAME — Identidad visual V6
 
 Prototipo visual funcional de la PWA.
 
@@ -80,3 +80,15 @@ Los tres logos están ahora incrustados directamente en `index.html` como imáge
 PNG codificadas en data URI. El navegador ya no depende de encontrar
 `assets/logo-40k.png`, `logo-sigmar.png` o `logo-fantasy.png`, por lo que el logo
 no se rompe al mover archivos, probar localmente o desplegar en GitHub Pages.
+
+
+## Cambio V6 — encabezados del usuario
+
+Se han sustituido los logos del encabezado por las tres imágenes proporcionadas
+por el usuario, embebidas directamente dentro del HTML para evitar errores de
+ruta. Se usan tanto en la cabecera principal como en la pantalla “ELIGE TU SINO”.
+
+Correspondencia:
+- 40K → logo metálico azul
+- Sigmar → logo dorado
+- Fantasy → logo pergamino rojo
