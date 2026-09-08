@@ -1,4 +1,4 @@
-# PILE OF SHAME — Identidad visual V7
+# PILE OF SHAME — V8 Social
 
 Prototipo visual funcional de la PWA.
 
@@ -106,3 +106,30 @@ Correspondencia:
   2. Material de hobby (pintura, pincel, herramienta u otro).
   3. Nueva publicación.
 - Los materiales añadidos aparecen también en la colección con su tipo indicado.
+
+
+## Cambios V8 — estructura social
+
+- Eliminado el concepto de círculos.
+- Nueva pestaña **Explorar**.
+- Usuarios con:
+  - seguidores,
+  - seguidos,
+  - amistad cuando el seguimiento es mutuo.
+- Botones de seguir/dejar de seguir.
+- Indicador **Amigos** cuando dos usuarios se siguen mutuamente.
+- Publicaciones con visibilidad:
+  - Todo el mundo,
+  - Amigos,
+  - Solo yo.
+- El feed respeta la visibilidad del prototipo.
+- Likes corregidos:
+  - un usuario solo puede dar un like,
+  - volver a pulsar quita el like.
+- Perfil actualizado con seguidores y seguidos.
+- La campana superior sigue siendo el acceso a notificaciones.
+- Se mantiene Colección como pestaña principal.
+
+> Nota: esta V8 sigue siendo un prototipo local. La unicidad real del like,
+> permisos de privacidad, seguidores y cuentas se reforzarán también en la
+> base de datos cuando conectemos Supabase.

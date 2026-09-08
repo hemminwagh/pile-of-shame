@@ -42,14 +42,53 @@ const defaultState = {
     {id:crypto.randomUUID(),kind:"mini",name:"Proyecto caja",faction:"Otros",status:"Pendiente",cost:0,emoji:"📦"}
   ],
   posts:[
-    {id:crypto.randomUUID(),author:"Laura",initials:"L",text:"He terminado por fin esta unidad. Tres tardes y una cantidad irresponsable de pinceles.",likes:4,comments:2,time:"Hace 32 min",emoji:"🎨"},
-    {id:crypto.randomUUID(),author:"Elena",initials:"E",text:"Probando esquema nuevo para los Gretchin. Creo que este verde se queda.",likes:3,comments:1,time:"Hace 2 h",emoji:"🟢"}
+    {
+      id:crypto.randomUUID(),
+      author:"Laura",
+      authorHandle:"@laura",
+      initials:"L",
+      text:"He terminado por fin esta unidad. Tres tardes y una cantidad irresponsable de pinceles.",
+      likes:4,
+      comments:2,
+      time:"Hace 32 min",
+      emoji:"🎨",
+      visibility:"public",
+      likedByMe:false
+    },
+    {
+      id:crypto.randomUUID(),
+      author:"Elena",
+      authorHandle:"@elena",
+      initials:"E",
+      text:"Probando esquema nuevo para los Gretchin. Creo que este verde se queda.",
+      likes:3,
+      comments:1,
+      time:"Hace 2 h",
+      emoji:"🟢",
+      visibility:"friends",
+      likedByMe:false
+    },
+    {
+      id:crypto.randomUUID(),
+      author:"Marta",
+      authorHandle:"@marta",
+      initials:"M",
+      text:"Primera prueba de esquema para este proyecto. Todavía no sé si me convence.",
+      likes:7,
+      comments:3,
+      time:"Ayer",
+      emoji:"🖌️",
+      visibility:"public",
+      likedByMe:true
+    }
   ],
-  friends:[
-    {name:"Laura",handle:"@laura",info:"12 proyectos · 84 minis",faction:"gitz"},
-    {name:"Marta",handle:"@marta",info:"6 proyectos · 41 minis",faction:"soulblight"},
-    {name:"Ana",handle:"@ana",info:"9 proyectos · 67 minis",faction:"bretonnia"},
-    {name:"Sara",handle:"@sara",info:"4 proyectos · 29 minis",faction:"adepta"}
+  people:[
+    {id:"laura",name:"Laura",handle:"@laura",info:"12 proyectos · 84 minis",faction:"gitz",following:true,followsYou:true},
+    {id:"marta",name:"Marta",handle:"@marta",info:"6 proyectos · 41 minis",faction:"soulblight",following:false,followsYou:true},
+    {id:"ana",name:"Ana",handle:"@ana",info:"9 proyectos · 67 minis",faction:"bretonnia",following:true,followsYou:false},
+    {id:"sara",name:"Sara",handle:"@sara",info:"4 proyectos · 29 minis",faction:"adepta",following:true,followsYou:true},
+    {id:"nuria",name:"Nuria",handle:"@nuriahobby",info:"17 proyectos · 132 minis",faction:"orks",following:false,followsYou:false},
+    {id:"dani",name:"Dani",handle:"@pileofplastic",info:"8 proyectos · 58 minis",faction:"stormcast",following:false,followsYou:false}
   ]
 };
 
@@ -63,12 +102,39 @@ function cloneDefault(){
 function loadState(){
   try{
     const existing = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if(!existing) return cloneDefault();
-    return {
-      ...cloneDefault(),
+    const base = cloneDefault();
+    if(!existing) return base;
+
+    const merged = {
+      ...base,
       ...existing,
-      user:{...cloneDefault().user,...existing.user}
+      user:{...base.user,...existing.user}
     };
+
+    // Migración V7 -> V8: los antiguos "friends" pasan a ser people.
+    if(!Array.isArray(existing.people)){
+      const legacy = Array.isArray(existing.friends) ? existing.friends : [];
+      merged.people = legacy.length
+        ? legacy.map((p,index)=>({
+            id:String(p.handle || p.name || index).replace("@",""),
+            name:p.name,
+            handle:p.handle,
+            info:p.info,
+            faction:p.faction || "none",
+            following:true,
+            followsYou:index % 2 === 0
+          }))
+        : base.people;
+    }
+
+    merged.posts = (existing.posts || base.posts).map(post=>({
+      ...post,
+      authorHandle:post.authorHandle || (post.author === merged.user.name ? merged.user.handle : "@" + String(post.author || "usuario").toLowerCase()),
+      visibility:post.visibility || "public",
+      likedByMe:Boolean(post.likedByMe)
+    }));
+
+    return merged;
   }catch{
     return cloneDefault();
   }
@@ -132,6 +198,35 @@ function pickTheme(theme){
 function currentFaction(){
   return factions.find(f=>f.id===state.user.favoriteFaction) || factions.at(-1);
 }
+function isMutual(person){
+  return Boolean(person?.following && person?.followsYou);
+}
+function followerCount(){
+  return state.people.filter(p=>p.followsYou).length;
+}
+function followingCount(){
+  return state.people.filter(p=>p.following).length;
+}
+function personForAuthor(author,handle){
+  return state.people.find(p=>p.handle===handle || p.name===author);
+}
+function canSeePost(post){
+  if(post.author === state.user.name) return true;
+  if(post.visibility === "public") return true;
+  if(post.visibility === "private") return false;
+  if(post.visibility === "friends"){
+    return isMutual(personForAuthor(post.author,post.authorHandle));
+  }
+  return true;
+}
+function visibilityMeta(value){
+  return ({
+    public:{icon:"◎",label:"Público"},
+    friends:{icon:"♧",label:"Amigos"},
+    private:{icon:"◈",label:"Solo yo"}
+  })[value] || {icon:"◎",label:"Público"};
+}
+
 function avatarHTML(sizeClass="avatar"){
   return state.user.avatarData
     ? `<div class="${sizeClass}"><img src="${state.user.avatarData}" alt=""></div>`
@@ -154,36 +249,48 @@ function toast(message){
 }
 
 function renderFeed(){
+  const visiblePosts = state.posts.filter(canSeePost);
   return `
     <div class="screen-intro">
       <div>
         <span class="micro-label">INICIO</span>
         <h1>Actividad</h1>
       </div>
-      <button style="border:0;background:transparent;color:var(--accent-2);cursor:pointer" data-route="community">Mi círculo</button>
+      <button style="border:0;background:transparent;color:var(--accent-2);cursor:pointer" data-route="explore">Explorar</button>
     </div>
 
-    ${state.posts.map(post=>`
-      <article class="card post-card">
-        <div class="row">
-          <div class="avatar">${esc(post.initials)}</div>
-          <div>
-            <div class="post-name">${esc(post.author)}</div>
-            <div class="meta">${esc(post.time)}</div>
+    ${visiblePosts.length ? visiblePosts.map(post=>{
+      const privacy=visibilityMeta(post.visibility);
+      const person=personForAuthor(post.author,post.authorHandle);
+      const friend=person && isMutual(person);
+      return `
+        <article class="card post-card">
+          <div class="row">
+            <div class="avatar">${esc(post.initials)}</div>
+            <div>
+              <div class="post-name">
+                ${esc(post.author)}
+                ${friend ? '<span class="friend-chip">Amigos</span>' : ''}
+              </div>
+              <div class="meta">${esc(post.authorHandle || "")} · ${esc(post.time)}</div>
+              <div class="visibility-pill">${privacy.icon} ${privacy.label}</div>
+            </div>
+            <button style="margin-left:auto;border:0;background:transparent;color:var(--muted)">•••</button>
           </div>
-          <button style="margin-left:auto;border:0;background:transparent;color:var(--muted)">•••</button>
-        </div>
 
-        <p class="post-text">${esc(post.text)}</p>
-        <div class="post-media">${esc(post.emoji)}</div>
+          <p class="post-text">${esc(post.text)}</p>
+          <div class="post-media">${esc(post.emoji)}</div>
 
-        <div class="post-actions">
-          <button class="like-btn" data-id="${post.id}">♡ <span>${post.likes}</span></button>
-          <button>▢ <span>${post.comments}</span></button>
-          <button class="save-action">◇</button>
-        </div>
-      </article>
-    `).join("")}
+          <div class="post-actions">
+            <button class="like-btn ${post.likedByMe ? "liked" : ""}" data-id="${post.id}">
+              ${post.likedByMe ? "♥" : "♡"} <span>${post.likes}</span>
+            </button>
+            <button>▢ <span>${post.comments}</span></button>
+            <button class="save-action">◇</button>
+          </div>
+        </article>
+      `;
+    }).join("") : `<div class="no-posts">No hay publicaciones visibles todavía.</div>`}
   `;
 }
 
@@ -327,6 +434,23 @@ function renderAdd(){
             <label>Texto
               <textarea name="text" placeholder="He terminado…, estoy probando…, nueva compra…" required></textarea>
             </label>
+
+            <label>Visibilidad</label>
+            <div class="privacy-options">
+              <label class="privacy-option">
+                <input type="radio" name="visibility" value="public" checked>
+                <span><b>◎</b>Todo el mundo</span>
+              </label>
+              <label class="privacy-option">
+                <input type="radio" name="visibility" value="friends">
+                <span><b>♧</b>Amigos</span>
+              </label>
+              <label class="privacy-option">
+                <input type="radio" name="visibility" value="private">
+                <span><b>◈</b>Solo yo</span>
+              </label>
+            </div>
+
             <button class="primary-btn" type="submit">Publicar</button>
           </form>
         </div>
@@ -336,36 +460,64 @@ function renderAdd(){
   `;
 }
 
-function renderCommunity(){
+function renderExplore(){
   return `
     <div class="screen-intro">
       <div>
-        <span class="micro-label">COMUNIDAD</span>
-        <h1>Mi círculo</h1>
-        <p>5 miembros</p>
+        <span class="micro-label">DESCUBRIR</span>
+        <h1>Explorar</h1>
+        <p>Encuentra gente del hobby y decide a quién seguir.</p>
       </div>
-      <button style="border:0;background:transparent;color:var(--accent-2);cursor:pointer">Invitar</button>
     </div>
 
-    <section class="card">
-      ${[
-        {name:state.user.name,handle:state.user.handle,info:"Tú",faction:state.user.favoriteFaction,self:true},
-        ...state.friends
-      ].map(user=>{
-        const faction=factions.find(f=>f.id===user.faction) || factions.at(-1);
-        return `
-          <div class="community-user row">
-            <div class="avatar">${esc(user.name[0])}</div>
-            <div style="flex:1">
-              <div class="post-name">${esc(user.name)} ${user.self?'<span class="tag">Tú</span>':''}</div>
-              <div class="meta">${esc(user.handle)} · ${esc(user.info)}</div>
-            </div>
-            <div class="faction-sigil" title="${esc(faction.name)}">${esc(faction.icon)}</div>
-          </div>
-        `;
-      }).join("")}
+    <div class="explore-search">
+      <input id="peopleSearch" type="search" placeholder="Buscar por nombre o @usuario">
+    </div>
+
+    <div class="social-tabs">
+      <button class="social-tab active" data-social-filter="all">Todos</button>
+      <button class="social-tab" data-social-filter="friends">Amigos</button>
+    </div>
+
+    <section class="card" id="peopleList">
+      ${renderPeopleList("all")}
     </section>
   `;
+}
+
+function renderPeopleList(filter="all",query=""){
+  const q=String(query||"").trim().toLowerCase();
+  const people=state.people.filter(person=>{
+    const matchesFilter = filter==="friends" ? isMutual(person) : true;
+    const matchesQuery = !q || person.name.toLowerCase().includes(q) || person.handle.toLowerCase().includes(q);
+    return matchesFilter && matchesQuery;
+  });
+
+  if(!people.length){
+    return `<div class="no-posts">No hay usuarios que coincidan.</div>`;
+  }
+
+  return people.map(person=>{
+    const faction=factions.find(f=>f.id===person.faction) || factions.at(-1);
+    const mutual=isMutual(person);
+    const buttonClass=mutual ? "friend" : person.following ? "following" : "";
+    const buttonText=mutual ? "Amigos" : person.following ? "Siguiendo" : person.followsYou ? "Seguir también" : "Seguir";
+
+    return `
+      <div class="person-card">
+        <div class="avatar">${esc(person.name[0])}</div>
+        <div class="person-copy">
+          <strong>
+            ${esc(person.name)}
+            ${mutual ? '<span class="friend-chip">Amigos</span>' : ''}
+          </strong>
+          <div class="meta">${esc(person.handle)} · ${esc(person.info)}</div>
+          <div class="visibility-pill">${esc(faction.icon)} ${esc(faction.name)}${person.followsYou && !mutual ? " · Te sigue" : ""}</div>
+        </div>
+        <button class="follow-btn ${buttonClass}" data-person-id="${esc(person.id)}">${buttonText}</button>
+      </div>
+    `;
+  }).join("");
 }
 
 function profileGallery(){
@@ -403,6 +555,9 @@ function renderProfile(){
       <div class="profile-handle">${esc(state.user.handle)}</div>
 
       <p class="profile-bio">${esc(state.user.bio)}</p>
+      <div class="profile-follow-line">
+        <strong>${followingCount()}</strong> Siguiendo · <strong>${followerCount()}</strong> Seguidores
+      </div>
 
       <div class="faction-badge">
         <div class="faction-sigil">${esc(faction.icon)}</div>
@@ -414,8 +569,8 @@ function renderProfile(){
 
       <div class="profile-stats">
         <div class="profile-stat"><strong>${ownPosts}</strong><span>Publicaciones</span></div>
-        <div class="profile-stat"><strong>${state.collection.length}</strong><span>Colección</span></div>
-        <div class="profile-stat"><strong>${state.friends.length}</strong><span>Círculo</span></div>
+        <div class="profile-stat"><strong>${followerCount()}</strong><span>Seguidores</span></div>
+        <div class="profile-stat"><strong>${followingCount()}</strong><span>Siguiendo</span></div>
       </div>
 
       <div class="profile-tabs">
@@ -436,7 +591,7 @@ function render(){
     feed:renderFeed,
     collection:renderCollection,
     add:renderAdd,
-    community:renderCommunity,
+    explore:renderExplore,
     profile:renderProfile
   }[route]();
 
@@ -448,11 +603,57 @@ function render(){
     btn.addEventListener("click",()=>{
       const post=state.posts.find(p=>p.id===btn.dataset.id);
       if(!post) return;
-      post.likes++;
+
+      post.likedByMe = !post.likedByMe;
+      post.likes = Math.max(0, Number(post.likes || 0) + (post.likedByMe ? 1 : -1));
+
       saveState();
       render();
     });
   });
+
+  let activeSocialFilter="all";
+
+  document.querySelectorAll("[data-social-filter]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      activeSocialFilter=btn.dataset.socialFilter;
+      document.querySelectorAll("[data-social-filter]").forEach(b=>b.classList.toggle("active",b===btn));
+      const list=document.getElementById("peopleList");
+      const query=document.getElementById("peopleSearch")?.value || "";
+      if(list){
+        list.innerHTML=renderPeopleList(activeSocialFilter,query);
+        bindFollowButtons();
+      }
+    });
+  });
+
+  document.getElementById("peopleSearch")?.addEventListener("input",event=>{
+    const list=document.getElementById("peopleList");
+    if(list){
+      list.innerHTML=renderPeopleList(activeSocialFilter,event.currentTarget.value);
+      bindFollowButtons();
+    }
+  });
+
+  function bindFollowButtons(){
+    document.querySelectorAll("[data-person-id]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const person=state.people.find(p=>p.id===btn.dataset.personId);
+        if(!person) return;
+        person.following=!person.following;
+        saveState();
+
+        const list=document.getElementById("peopleList");
+        const query=document.getElementById("peopleSearch")?.value || "";
+        if(list){
+          list.innerHTML=renderPeopleList(activeSocialFilter,query);
+          bindFollowButtons();
+        }
+      });
+    });
+  }
+
+  bindFollowButtons();
 
   document.getElementById("addCollectionForm")?.addEventListener("submit",event=>{
     event.preventDefault();
@@ -503,12 +704,15 @@ function render(){
     state.posts.unshift({
       id:crypto.randomUUID(),
       author:state.user.name,
+      authorHandle:state.user.handle,
       initials:state.user.name[0]?.toUpperCase()||"P",
       text:fd.get("text"),
       likes:0,
       comments:0,
       time:"Ahora",
-      emoji:"✨"
+      emoji:"✨",
+      visibility:String(fd.get("visibility") || "public"),
+      likedByMe:false
     });
     saveState();
     toast("Publicado");

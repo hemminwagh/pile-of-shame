@@ -950,3 +950,188 @@ body[data-theme="fantasy"] .add-accordion{
     grid-template-columns:1fr 1fr;
   }
 }
+
+
+/* =========================================================
+   V8 — CAPA SOCIAL: SEGUIDORES · AMIGOS · PRIVACIDAD
+   ========================================================= */
+
+.social-tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  margin:0 0 12px;
+  padding:4px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  border-radius:12px;
+}
+
+.social-tab{
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  border-radius:8px;
+  padding:9px 8px;
+  font-weight:800;
+  font-size:.74rem;
+  cursor:pointer;
+}
+
+.social-tab.active{
+  background:color-mix(in srgb,var(--accent) 12%,var(--surface-2));
+  color:var(--accent-2);
+}
+
+.explore-search{
+  position:relative;
+  margin-bottom:12px;
+}
+.explore-search input{
+  padding-left:38px;
+}
+.explore-search::before{
+  content:"⌕";
+  position:absolute;
+  left:13px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--accent);
+  z-index:2;
+}
+
+.person-card{
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr) auto;
+  align-items:center;
+  gap:11px;
+  padding:13px 0;
+  border-bottom:1px solid var(--line);
+}
+.person-card:last-child{border-bottom:0}
+
+.person-copy{
+  min-width:0;
+}
+.person-copy strong{
+  display:block;
+  font-family:var(--display-font);
+}
+.person-copy .meta{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.follow-btn{
+  border:1px solid var(--accent);
+  background:var(--accent);
+  color:var(--bg);
+  border-radius:999px;
+  padding:8px 11px;
+  font-size:.7rem;
+  font-weight:900;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.follow-btn.following{
+  background:transparent;
+  color:var(--accent-2);
+}
+.follow-btn.friend{
+  border-color:color-mix(in srgb,var(--accent) 65%,var(--line));
+  background:color-mix(in srgb,var(--accent) 10%,transparent);
+  color:var(--accent-2);
+}
+
+.friend-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:3px 6px;
+  margin-left:4px;
+  border-radius:999px;
+  border:1px solid color-mix(in srgb,var(--accent) 55%,var(--line));
+  color:var(--accent-2);
+  font-size:.55rem;
+  vertical-align:middle;
+}
+
+.visibility-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  color:var(--muted);
+  font-size:.65rem;
+  margin-top:2px;
+}
+
+.privacy-options{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+}
+.privacy-option{
+  position:relative;
+}
+.privacy-option input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.privacy-option span{
+  min-height:54px;
+  padding:8px 6px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--surface-2);
+  display:grid;
+  place-items:center;
+  gap:2px;
+  text-align:center;
+  cursor:pointer;
+  color:var(--muted);
+  font-size:.67rem;
+}
+.privacy-option span b{
+  font-size:1rem;
+  font-weight:500;
+}
+.privacy-option input:checked + span{
+  border-color:var(--accent);
+  color:var(--accent-2);
+  background:color-mix(in srgb,var(--accent) 10%,var(--surface-2));
+}
+
+.like-btn.liked{
+  color:var(--accent-2);
+}
+
+.profile-follow-line{
+  color:var(--muted);
+  font-size:.73rem;
+  margin:-4px 0 12px;
+}
+.profile-follow-line strong{
+  color:var(--text);
+}
+
+.no-posts{
+  padding:32px 12px;
+  text-align:center;
+  border:1px dashed var(--line);
+  border-radius:12px;
+  color:var(--muted);
+}
+
+@media(max-width:420px){
+  .privacy-options{
+    grid-template-columns:1fr;
+  }
+  .privacy-option span{
+    min-height:44px;
+    display:flex;
+    justify-content:flex-start;
+    padding:9px 10px;
+  }
+}
