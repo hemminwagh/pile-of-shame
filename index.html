@@ -13,6 +13,53 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body data-theme="40k">
+
+  <div id="authGate" class="auth-gate open" aria-hidden="false">
+    <div class="auth-backdrop"></div>
+    <section class="auth-panel">
+      <div class="auth-logo-wrap">
+        <img id="authLogo" class="auth-logo" alt="PILE OF SHAME">
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-auth-tab="login">Entrar</button>
+        <button class="auth-tab" data-auth-tab="signup">Crear cuenta</button>
+      </div>
+
+      <form id="loginForm" class="auth-form">
+        <label>@usuario
+          <input name="handle" autocomplete="username" placeholder="@gretchinqueen" required>
+        </label>
+        <label>Contraseña
+          <input name="password" type="password" autocomplete="current-password" minlength="6" required>
+        </label>
+        <button class="primary-btn" type="submit">Entrar en la pila</button>
+      </form>
+
+      <form id="signupForm" class="auth-form" hidden>
+        <label>Nombre
+          <input name="name" maxlength="30" placeholder="Elena" required>
+        </label>
+        <label>@usuario
+          <input name="handle" maxlength="24" autocomplete="username" placeholder="@gretchinqueen" required>
+          <small>3–24 caracteres: letras, números y _</small>
+        </label>
+        <label>Contraseña
+          <input name="password" type="password" autocomplete="new-password" minlength="6" required>
+        </label>
+        <label>Repite la contraseña
+          <input name="password2" type="password" autocomplete="new-password" minlength="6" required>
+        </label>
+        <button class="primary-btn" type="submit">Crear cuenta</button>
+      </form>
+
+      <div id="authMessage" class="auth-message" role="status"></div>
+      <p class="auth-note">
+        No pedimos correo ni teléfono. Guarda copias de seguridad de tus datos desde Ajustes.
+      </p>
+    </section>
+  </div>
+
   <div id="fateGate" class="fate-gate" aria-hidden="true">
     <div class="fate-backdrop"></div>
     <section class="fate-panel">
@@ -133,6 +180,22 @@
       <h3>Primera pantalla</h3>
       <button id="showFateAgain" class="secondary-btn">Mostrar “ELIGE TU SINO”</button>
     </div>
+
+    <div class="settings-block">
+      <h3>Cuenta y copia de seguridad</h3>
+      <p>La copia guarda tu perfil, publicaciones y colección para poder restaurarlos en otra cuenta.</p>
+      <div class="actions-row">
+        <button id="exportBackupBtn" class="secondary-btn">Exportar copia</button>
+        <label class="secondary-btn" style="cursor:pointer">
+          Importar copia
+          <input id="importBackupInput" type="file" accept="application/json" hidden>
+        </label>
+      </div>
+    </div>
+    <div class="settings-block">
+      <button id="logoutBtn" class="secondary-btn">Cerrar sesión</button>
+    </div>
+
   </dialog>
 
   <dialog id="editProfileDialog" class="modal profile-edit-modal">
@@ -150,7 +213,8 @@
       </label>
 
       <label>Usuario
-        <input name="handle" maxlength="30" required />
+        <input name="handle" maxlength="30" readonly />
+        <small>El @usuario no se puede cambiar todavía.</small>
       </label>
 
       <label>Biografía

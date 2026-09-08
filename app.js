@@ -1,5 +1,14 @@
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./supabase-config.js";
 
-const STORAGE_KEY = "pile-of-shame-v2";
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
+
 const THEME_KEY = "pile-of-shame-theme";
 const SEEN_FATE_KEY = "pile-of-shame-seen-fate";
 
@@ -27,151 +36,91 @@ const factions = [
   { id:"none", name:"Sin favorita", universe:"—", icon:"·" }
 ];
 
-const defaultState = {
+const emptyState = () => ({
   user: {
-    name:"Elena",
-    handle:"@elena",
-    bio:"Pintura, plástico y decisiones financieras cuestionables.",
-    favoriteFaction:"orks",
+    id:"",
+    name:"",
+    handle:"",
+    bio:"",
+    favoriteFaction:"none",
     avatarData:"",
     bannerData:""
   },
-  collection:[
-    {id:crypto.randomUUID(),kind:"mini",name:"Gretchin",faction:"Orks",status:"Pintado",cost:18,emoji:"🟢"},
-    {id:crypto.randomUUID(),kind:"mini",name:"Grifocorcel",faction:"Stormcast",status:"En proceso",cost:32,emoji:"🪽"},
-    {id:crypto.randomUUID(),kind:"mini",name:"Proyecto caja",faction:"Otros",status:"Pendiente",cost:0,emoji:"📦"}
-  ],
-  posts:[
-    {
-      id:crypto.randomUUID(),
-      author:"Laura",
-      authorHandle:"@laura",
-      initials:"L",
-      text:"He terminado por fin esta unidad. Tres tardes y una cantidad irresponsable de pinceles.",
-      likes:4,
-      comments:2,
-      time:"Hace 32 min",
-      emoji:"🎨",
-      visibility:"public",
-      likedByMe:false
-    },
-    {
-      id:crypto.randomUUID(),
-      author:"Elena",
-      authorHandle:"@elena",
-      initials:"E",
-      text:"Probando esquema nuevo para los Gretchin. Creo que este verde se queda.",
-      likes:3,
-      comments:1,
-      time:"Hace 2 h",
-      emoji:"🟢",
-      visibility:"friends",
-      likedByMe:false
-    },
-    {
-      id:crypto.randomUUID(),
-      author:"Marta",
-      authorHandle:"@marta",
-      initials:"M",
-      text:"Primera prueba de esquema para este proyecto. Todavía no sé si me convence.",
-      likes:7,
-      comments:3,
-      time:"Ayer",
-      emoji:"🖌️",
-      visibility:"public",
-      likedByMe:true
-    }
-  ],
-  people:[
-    {id:"laura",name:"Laura",handle:"@laura",info:"12 proyectos · 84 minis",faction:"gitz",following:true,followsYou:true},
-    {id:"marta",name:"Marta",handle:"@marta",info:"6 proyectos · 41 minis",faction:"soulblight",following:false,followsYou:true},
-    {id:"ana",name:"Ana",handle:"@ana",info:"9 proyectos · 67 minis",faction:"bretonnia",following:true,followsYou:false},
-    {id:"sara",name:"Sara",handle:"@sara",info:"4 proyectos · 29 minis",faction:"adepta",following:true,followsYou:true},
-    {id:"nuria",name:"Nuria",handle:"@nuriahobby",info:"17 proyectos · 132 minis",faction:"orks",following:false,followsYou:false},
-    {id:"dani",name:"Dani",handle:"@pileofplastic",info:"8 proyectos · 58 minis",faction:"stormcast",following:false,followsYou:false}
-  ]
-};
+  collection:[],
+  posts:[],
+  people:[]
+});
 
-let state = loadState();
+let state = emptyState();
+let currentUser = null;
 let route = "feed";
 let profileTab = "posts";
+let activeSocialFilter = "all";
+let loadingCloud = false;
 
-function cloneDefault(){
-  return JSON.parse(JSON.stringify(defaultState));
-}
-function loadState(){
-  try{
-    const existing = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    const base = cloneDefault();
-    if(!existing) return base;
-
-    const merged = {
-      ...base,
-      ...existing,
-      user:{...base.user,...existing.user}
-    };
-
-    // Migración V7 -> V8: los antiguos "friends" pasan a ser people.
-    if(!Array.isArray(existing.people)){
-      const legacy = Array.isArray(existing.friends) ? existing.friends : [];
-      merged.people = legacy.length
-        ? legacy.map((p,index)=>({
-            id:String(p.handle || p.name || index).replace("@",""),
-            name:p.name,
-            handle:p.handle,
-            info:p.info,
-            faction:p.faction || "none",
-            following:true,
-            followsYou:index % 2 === 0
-          }))
-        : base.people;
-    }
-
-    merged.posts = (existing.posts || base.posts).map(post=>({
-      ...post,
-      authorHandle:post.authorHandle || (post.author === merged.user.name ? merged.user.handle : "@" + String(post.author || "usuario").toLowerCase()),
-      visibility:post.visibility || "public",
-      likedByMe:Boolean(post.likedByMe)
-    }));
-
-    return merged;
-  }catch{
-    return cloneDefault();
-  }
-}
-function saveState(){
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-}
 function esc(value=""){
   return String(value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 }
+
+function normalizeHandle(raw=""){
+  return String(raw)
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/,"")
+    .replace(/[^a-z0-9_]/g,"");
+}
+function credentialEmail(handle){
+  return `${normalizeHandle(handle)}@pileofshame.invalid`;
+}
+function displayHandle(handle=""){
+  const h=normalizeHandle(handle);
+  return h ? `@${h}` : "";
+}
+function relativeTime(iso){
+  if(!iso) return "";
+  const ms=Date.now()-new Date(iso).getTime();
+  const mins=Math.max(0,Math.floor(ms/60000));
+  if(mins<1) return "Ahora";
+  if(mins<60) return `Hace ${mins} min`;
+  const hours=Math.floor(mins/60);
+  if(hours<24) return `Hace ${hours} h`;
+  const days=Math.floor(hours/24);
+  if(days<7) return `Hace ${days} d`;
+  return new Date(iso).toLocaleDateString("es-ES");
+}
+function toast(message){
+  const node=document.createElement("div");
+  node.textContent=message;
+  node.style.cssText="position:fixed;left:50%;bottom:100px;transform:translateX(-50%);z-index:220;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:999px;font-weight:900;box-shadow:var(--shadow)";
+  document.body.appendChild(node);
+  setTimeout(()=>node.remove(),1800);
+}
+function setAuthMessage(message="",error=false){
+  const el=document.getElementById("authMessage");
+  if(!el) return;
+  el.textContent=message;
+  el.classList.toggle("error",error);
+}
+
 function getTheme(){
   return localStorage.getItem(THEME_KEY) || "40k";
 }
-function setTheme(theme, persist=true){
+function setTheme(theme,persist=true){
   if(!["40k","sigmar","fantasy"].includes(theme)) theme="40k";
   document.body.dataset.theme=theme;
   if(persist) localStorage.setItem(THEME_KEY,theme);
 
   const logoStore=document.getElementById("embeddedLogoStore");
   const metas={
-    "40k":{
-      themeColor:"#07131b",
-      logo:logoStore?.dataset.logo40k || ""
-    },
-    "sigmar":{
-      themeColor:"#070c10",
-      logo:logoStore?.dataset.logoSigmar || ""
-    },
-    "fantasy":{
-      themeColor:"#17110c",
-      logo:logoStore?.dataset.logoFantasy || ""
-    }
+    "40k":{themeColor:"#07131b",logo:logoStore?.dataset.logo40k || ""},
+    "sigmar":{themeColor:"#070c10",logo:logoStore?.dataset.logoSigmar || ""},
+    "fantasy":{themeColor:"#17110c",logo:logoStore?.dataset.logoFantasy || ""}
   };
 
   const brandLogo=document.getElementById("brandLogo");
+  const authLogo=document.getElementById("authLogo");
   if(brandLogo && metas[theme].logo) brandLogo.src=metas[theme].logo;
-
+  if(authLogo && metas[theme].logo) authLogo.src=metas[theme].logo;
   document.querySelector('meta[name="theme-color"]').setAttribute("content",metas[theme].themeColor);
 
   document.querySelectorAll("[data-quick-theme],[data-settings-theme]").forEach(btn=>{
@@ -179,6 +128,7 @@ function setTheme(theme, persist=true){
     btn.classList.toggle("active",value===theme);
   });
 }
+
 function openFateGate(){
   const gate=document.getElementById("fateGate");
   gate.classList.add("open");
@@ -195,6 +145,18 @@ function pickTheme(theme){
   closeFateGate();
   render();
 }
+
+function showAuthGate(){
+  const gate=document.getElementById("authGate");
+  gate.classList.add("open");
+  gate.setAttribute("aria-hidden","false");
+}
+function hideAuthGate(){
+  const gate=document.getElementById("authGate");
+  gate.classList.remove("open");
+  gate.setAttribute("aria-hidden","true");
+}
+
 function currentFaction(){
   return factions.find(f=>f.id===state.user.favoriteFaction) || factions.at(-1);
 }
@@ -207,17 +169,8 @@ function followerCount(){
 function followingCount(){
   return state.people.filter(p=>p.following).length;
 }
-function personForAuthor(author,handle){
-  return state.people.find(p=>p.handle===handle || p.name===author);
-}
-function canSeePost(post){
-  if(post.author === state.user.name) return true;
-  if(post.visibility === "public") return true;
-  if(post.visibility === "private") return false;
-  if(post.visibility === "friends"){
-    return isMutual(personForAuthor(post.author,post.authorHandle));
-  }
-  return true;
+function personForAuthor(authorId){
+  return state.people.find(p=>p.id===authorId);
 }
 function visibilityMeta(value){
   return ({
@@ -229,27 +182,133 @@ function visibilityMeta(value){
 
 function avatarHTML(sizeClass="avatar"){
   return state.user.avatarData
-    ? `<div class="${sizeClass}"><img src="${state.user.avatarData}" alt=""></div>`
+    ? `<div class="${sizeClass}"><img src="${esc(state.user.avatarData)}" alt=""></div>`
     : `<div class="${sizeClass}">${esc(state.user.name?.[0]?.toUpperCase() || "P")}</div>`;
 }
 function headerAvatar(){
   const el=document.getElementById("headerAvatar");
+  if(!el) return;
   if(state.user.avatarData){
-    el.innerHTML=`<img src="${state.user.avatarData}" alt="">`;
+    el.innerHTML=`<img src="${esc(state.user.avatarData)}" alt="">`;
   }else{
     el.textContent=state.user.name?.[0]?.toUpperCase() || "P";
   }
 }
-function toast(message){
-  const node=document.createElement("div");
-  node.textContent=message;
-  node.style.cssText="position:fixed;left:50%;bottom:100px;transform:translateX(-50%);z-index:200;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:999px;font-weight:900;box-shadow:var(--shadow)";
-  document.body.appendChild(node);
-  setTimeout(()=>node.remove(),1600);
+
+async function loadCloudState(){
+  if(!currentUser) return;
+  loadingCloud=true;
+  render();
+
+  const uid=currentUser.id;
+
+  const [
+    profileRes,
+    profilesRes,
+    followsRes,
+    postsRes,
+    collectionRes
+  ] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id",uid).single(),
+    supabase.from("profiles").select("*").neq("id",uid).order("created_at",{ascending:true}),
+    supabase.from("follows").select("*").or(`follower_id.eq.${uid},following_id.eq.${uid}`),
+    supabase.from("posts").select("*").order("created_at",{ascending:false}).limit(100),
+    supabase.from("collection_items").select("*").eq("user_id",uid).order("created_at",{ascending:false})
+  ]);
+
+  const firstError=[profileRes,profilesRes,followsRes,postsRes,collectionRes].find(x=>x.error)?.error;
+  if(firstError){
+    loadingCloud=false;
+    console.error(firstError);
+    throw firstError;
+  }
+
+  const visiblePosts=postsRes.data || [];
+  const postIds=visiblePosts.map(p=>p.id);
+
+  let likes=[], comments=[];
+  if(postIds.length){
+    const [likesRes,commentsRes]=await Promise.all([
+      supabase.from("post_likes").select("post_id,user_id").in("post_id",postIds),
+      supabase.from("comments").select("id,post_id").in("post_id",postIds)
+    ]);
+    if(likesRes.error) throw likesRes.error;
+    if(commentsRes.error) throw commentsRes.error;
+    likes=likesRes.data || [];
+    comments=commentsRes.data || [];
+  }
+
+  const ownProfile=profileRes.data;
+  const allOtherProfiles=profilesRes.data || [];
+  const follows=followsRes.data || [];
+
+  state.user={
+    id:uid,
+    name:ownProfile.display_name,
+    handle:displayHandle(ownProfile.handle),
+    bio:ownProfile.bio || "",
+    favoriteFaction:ownProfile.favorite_faction || "none",
+    avatarData:ownProfile.avatar_url || "",
+    bannerData:ownProfile.banner_url || ""
+  };
+
+  state.people=allOtherProfiles.map(profile=>({
+    id:profile.id,
+    name:profile.display_name,
+    handle:displayHandle(profile.handle),
+    info:"Coleccionista",
+    faction:profile.favorite_faction || "none",
+    avatarData:profile.avatar_url || "",
+    following:follows.some(f=>f.follower_id===uid && f.following_id===profile.id),
+    followsYou:follows.some(f=>f.follower_id===profile.id && f.following_id===uid)
+  }));
+
+  const profileMap=new Map([[uid,ownProfile],...allOtherProfiles.map(p=>[p.id,p])]);
+
+  state.posts=visiblePosts.map(post=>{
+    const profile=profileMap.get(post.user_id);
+    const postLikes=likes.filter(l=>l.post_id===post.id);
+    return {
+      id:post.id,
+      authorId:post.user_id,
+      author:profile?.display_name || "Usuario",
+      authorHandle:displayHandle(profile?.handle || ""),
+      initials:(profile?.display_name || "U")[0].toUpperCase(),
+      text:post.body,
+      likes:postLikes.length,
+      comments:comments.filter(c=>c.post_id===post.id).length,
+      time:relativeTime(post.created_at),
+      emoji:"✨",
+      visibility:post.visibility,
+      likedByMe:postLikes.some(l=>l.user_id===uid),
+      avatarData:profile?.avatar_url || ""
+    };
+  });
+
+  state.collection=(collectionRes.data || []).map(item=>({
+    id:item.id,
+    kind:item.kind,
+    name:item.name,
+    faction:item.faction,
+    category:item.category,
+    brand:item.brand,
+    status:item.status,
+    quantity:item.quantity,
+    cost:Number(item.cost || 0),
+    notes:item.notes,
+    visibility:item.visibility,
+    emoji:item.kind==="material"
+      ? (item.category==="Pintura" ? "🎨" : item.category==="Pincel" ? "🖌️" : item.category==="Herramienta" ? "🛠️" : "📦")
+      : "🎨"
+  }));
+
+  loadingCloud=false;
+  render();
 }
 
 function renderFeed(){
-  const visiblePosts = state.posts.filter(canSeePost);
+  if(loadingCloud) return `<div class="cloud-loading"><strong>Consultando la pila…</strong>Sincronizando con Supabase.</div>`;
+
   return `
     <div class="screen-intro">
       <div>
@@ -259,20 +318,24 @@ function renderFeed(){
       <button style="border:0;background:transparent;color:var(--accent-2);cursor:pointer" data-route="explore">Explorar</button>
     </div>
 
-    ${visiblePosts.length ? visiblePosts.map(post=>{
+    ${state.posts.length ? state.posts.map(post=>{
       const privacy=visibilityMeta(post.visibility);
-      const person=personForAuthor(post.author,post.authorHandle);
+      const person=personForAuthor(post.authorId);
       const friend=person && isMutual(person);
+      const avatar=post.avatarData
+        ? `<div class="avatar"><img src="${esc(post.avatarData)}" alt=""></div>`
+        : `<div class="avatar">${esc(post.initials)}</div>`;
+
       return `
         <article class="card post-card">
           <div class="row">
-            <div class="avatar">${esc(post.initials)}</div>
+            ${avatar}
             <div>
               <div class="post-name">
                 ${esc(post.author)}
                 ${friend ? '<span class="friend-chip">Amigos</span>' : ''}
               </div>
-              <div class="meta">${esc(post.authorHandle || "")} · ${esc(post.time)}</div>
+              <div class="meta">${esc(post.authorHandle)} · ${esc(post.time)}</div>
               <div class="visibility-pill">${privacy.icon} ${privacy.label}</div>
             </div>
             <button style="margin-left:auto;border:0;background:transparent;color:var(--muted)">•••</button>
@@ -290,12 +353,14 @@ function renderFeed(){
           </div>
         </article>
       `;
-    }).join("") : `<div class="no-posts">No hay publicaciones visibles todavía.</div>`}
+    }).join("") : `<div class="no-posts">Todavía no hay publicaciones visibles. Alguien tendrá que estrenar la desgracia.</div>`}
   `;
 }
 
 function renderCollection(){
+  if(loadingCloud) return `<div class="cloud-loading"><strong>Abriendo vitrinas…</strong>Sincronizando colección.</div>`;
   const painted=state.collection.filter(x=>x.status==="Pintado").length;
+
   return `
     <div class="screen-intro">
       <div>
@@ -307,9 +372,9 @@ function renderCollection(){
     </div>
 
     <section class="collection-grid">
-      ${state.collection.map(item=>`
+      ${state.collection.length ? state.collection.map(item=>`
         <article class="collection-card">
-          <div class="thumb">${esc(item.emoji || (item.kind==="material" ? "🖌️" : "🎨"))}</div>
+          <div class="thumb">${esc(item.emoji)}</div>
           <div class="copy">
             <strong>${esc(item.name)}</strong>
             <span class="meta">${esc(item.faction || item.category || "Hobby")}</span>
@@ -319,7 +384,7 @@ function renderCollection(){
             </div>
           </div>
         </article>
-      `).join("")}
+      `).join("") : `<div class="empty-state">Tu pila está sospechosamente vacía.</div>`}
     </section>
   `;
 }
@@ -424,7 +489,7 @@ function renderAdd(){
           <span class="add-summary-icon">✦</span>
           <span class="add-summary-copy">
             <strong>Nueva publicación</strong>
-            <small>Comparte un avance, compra o proyecto con tu círculo</small>
+            <small>Comparte un avance, compra o proyecto</small>
           </span>
           <span class="add-chevron">⌄</span>
         </summary>
@@ -434,7 +499,6 @@ function renderAdd(){
             <label>Texto
               <textarea name="text" placeholder="He terminado…, estoy probando…, nueva compra…" required></textarea>
             </label>
-
             <label>Visibilidad</label>
             <div class="privacy-options">
               <label class="privacy-option">
@@ -450,7 +514,6 @@ function renderAdd(){
                 <span><b>◈</b>Solo yo</span>
               </label>
             </div>
-
             <button class="primary-btn" type="submit">Publicar</button>
           </form>
         </div>
@@ -461,6 +524,8 @@ function renderAdd(){
 }
 
 function renderExplore(){
+  if(loadingCloud) return `<div class="cloud-loading"><strong>Buscando coleccionistas…</strong>Sincronizando perfiles.</div>`;
+
   return `
     <div class="screen-intro">
       <div>
@@ -475,12 +540,12 @@ function renderExplore(){
     </div>
 
     <div class="social-tabs">
-      <button class="social-tab active" data-social-filter="all">Todos</button>
-      <button class="social-tab" data-social-filter="friends">Amigos</button>
+      <button class="social-tab ${activeSocialFilter==="all"?"active":""}" data-social-filter="all">Todos</button>
+      <button class="social-tab ${activeSocialFilter==="friends"?"active":""}" data-social-filter="friends">Amigos</button>
     </div>
 
     <section class="card" id="peopleList">
-      ${renderPeopleList("all")}
+      ${renderPeopleList(activeSocialFilter)}
     </section>
   `;
 }
@@ -488,29 +553,27 @@ function renderExplore(){
 function renderPeopleList(filter="all",query=""){
   const q=String(query||"").trim().toLowerCase();
   const people=state.people.filter(person=>{
-    const matchesFilter = filter==="friends" ? isMutual(person) : true;
-    const matchesQuery = !q || person.name.toLowerCase().includes(q) || person.handle.toLowerCase().includes(q);
+    const matchesFilter=filter==="friends" ? isMutual(person) : true;
+    const matchesQuery=!q || person.name.toLowerCase().includes(q) || person.handle.toLowerCase().includes(q);
     return matchesFilter && matchesQuery;
   });
 
-  if(!people.length){
-    return `<div class="no-posts">No hay usuarios que coincidan.</div>`;
-  }
+  if(!people.length) return `<div class="no-posts">No hay usuarios que coincidan.</div>`;
 
   return people.map(person=>{
     const faction=factions.find(f=>f.id===person.faction) || factions.at(-1);
     const mutual=isMutual(person);
     const buttonClass=mutual ? "friend" : person.following ? "following" : "";
     const buttonText=mutual ? "Amigos" : person.following ? "Siguiendo" : person.followsYou ? "Seguir también" : "Seguir";
+    const avatar=person.avatarData
+      ? `<div class="avatar"><img src="${esc(person.avatarData)}" alt=""></div>`
+      : `<div class="avatar">${esc(person.name[0])}</div>`;
 
     return `
       <div class="person-card">
-        <div class="avatar">${esc(person.name[0])}</div>
+        ${avatar}
         <div class="person-copy">
-          <strong>
-            ${esc(person.name)}
-            ${mutual ? '<span class="friend-chip">Amigos</span>' : ''}
-          </strong>
+          <strong>${esc(person.name)} ${mutual ? '<span class="friend-chip">Amigos</span>' : ''}</strong>
           <div class="meta">${esc(person.handle)} · ${esc(person.info)}</div>
           <div class="visibility-pill">${esc(faction.icon)} ${esc(faction.name)}${person.followsYou && !mutual ? " · Te sigue" : ""}</div>
         </div>
@@ -522,29 +585,28 @@ function renderPeopleList(filter="all",query=""){
 
 function profileGallery(){
   if(profileTab==="posts"){
-    return state.posts.filter(p=>p.author===state.user.name).map(p=>`<div class="gallery-item">${esc(p.emoji)}</div>`).join("")
+    return state.posts.filter(p=>p.authorId===state.user.id).map(p=>`<div class="gallery-item">${esc(p.emoji)}</div>`).join("")
       || `<div class="empty-state">Aún no has publicado nada.</div>`;
   }
   if(profileTab==="collection"){
     return state.collection.map(x=>`<div class="gallery-item">${esc(x.emoji)}</div>`).join("")
       || `<div class="empty-state">Tu colección está vacía.</div>`;
   }
-  if(profileTab==="projects"){
-    return `<div class="empty-state">Los proyectos llegan en la siguiente fase funcional.</div>`;
-  }
-  return `<div class="empty-state">Wishlist preparada para la siguiente fase funcional.</div>`;
+  if(profileTab==="projects") return `<div class="empty-state">Proyectos: tabla creada en Supabase; interfaz completa en la siguiente fase.</div>`;
+  return `<div class="empty-state">Wishlist: tabla creada en Supabase; interfaz completa en la siguiente fase.</div>`;
 }
 
 function renderProfile(){
+  if(loadingCloud) return `<div class="cloud-loading"><strong>Montando tu vitrina…</strong>Sincronizando perfil.</div>`;
+
   const faction=currentFaction();
-  const ownPosts=state.posts.filter(p=>p.author===state.user.name).length;
+  const ownPosts=state.posts.filter(p=>p.authorId===state.user.id).length;
   const bannerStyle=state.user.bannerData
-    ? `style="background-image:linear-gradient(180deg,transparent 52%,var(--bg)),url('${state.user.bannerData}')"`
+    ? `style="background-image:linear-gradient(180deg,transparent 52%,var(--bg)),url('${esc(state.user.bannerData)}')"`
     : "";
 
   return `
     <div class="profile-cover ${state.user.bannerData?"has-banner":""}" ${bannerStyle}></div>
-
     <section class="profile-panel">
       <div class="profile-top">
         ${avatarHTML("profile-avatar")}
@@ -553,8 +615,8 @@ function renderProfile(){
 
       <h1 class="profile-name">${esc(state.user.name)}</h1>
       <div class="profile-handle">${esc(state.user.handle)}</div>
-
       <p class="profile-bio">${esc(state.user.bio)}</p>
+
       <div class="profile-follow-line">
         <strong>${followingCount()}</strong> Siguiendo · <strong>${followerCount()}</strong> Seguidores
       </div>
@@ -587,6 +649,11 @@ function renderProfile(){
 
 function render(){
   const app=document.getElementById("app");
+  if(!currentUser){
+    app.innerHTML="";
+    return;
+  }
+
   app.innerHTML={
     feed:renderFeed,
     collection:renderCollection,
@@ -595,128 +662,132 @@ function render(){
     profile:renderProfile
   }[route]();
 
+  bindDynamicEvents();
+  headerAvatar();
+  syncNav();
+}
+
+function bindDynamicEvents(){
   document.querySelectorAll("[data-route]").forEach(btn=>{
     btn.addEventListener("click",()=>setRoute(btn.dataset.route));
   });
 
   document.querySelectorAll(".like-btn").forEach(btn=>{
-    btn.addEventListener("click",()=>{
+    btn.addEventListener("click",async()=>{
       const post=state.posts.find(p=>p.id===btn.dataset.id);
-      if(!post) return;
+      if(!post || !currentUser) return;
+      btn.disabled=true;
 
-      post.likedByMe = !post.likedByMe;
-      post.likes = Math.max(0, Number(post.likes || 0) + (post.likedByMe ? 1 : -1));
+      let result;
+      if(post.likedByMe){
+        result=await supabase.from("post_likes")
+          .delete()
+          .eq("post_id",post.id)
+          .eq("user_id",currentUser.id);
+      }else{
+        result=await supabase.from("post_likes")
+          .insert({post_id:post.id,user_id:currentUser.id});
+      }
 
-      saveState();
-      render();
+      if(result.error){
+        console.error(result.error);
+        toast("No se pudo cambiar el like");
+      }else{
+        post.likedByMe=!post.likedByMe;
+        post.likes=Math.max(0,post.likes+(post.likedByMe?1:-1));
+        render();
+      }
     });
   });
-
-  let activeSocialFilter="all";
 
   document.querySelectorAll("[data-social-filter]").forEach(btn=>{
     btn.addEventListener("click",()=>{
       activeSocialFilter=btn.dataset.socialFilter;
-      document.querySelectorAll("[data-social-filter]").forEach(b=>b.classList.toggle("active",b===btn));
-      const list=document.getElementById("peopleList");
-      const query=document.getElementById("peopleSearch")?.value || "";
-      if(list){
-        list.innerHTML=renderPeopleList(activeSocialFilter,query);
-        bindFollowButtons();
-      }
+      render();
     });
   });
 
   document.getElementById("peopleSearch")?.addEventListener("input",event=>{
     const list=document.getElementById("peopleList");
-    if(list){
+    if(list) {
       list.innerHTML=renderPeopleList(activeSocialFilter,event.currentTarget.value);
       bindFollowButtons();
     }
   });
 
-  function bindFollowButtons(){
-    document.querySelectorAll("[data-person-id]").forEach(btn=>{
-      btn.addEventListener("click",()=>{
-        const person=state.people.find(p=>p.id===btn.dataset.personId);
-        if(!person) return;
-        person.following=!person.following;
-        saveState();
-
-        const list=document.getElementById("peopleList");
-        const query=document.getElementById("peopleSearch")?.value || "";
-        if(list){
-          list.innerHTML=renderPeopleList(activeSocialFilter,query);
-          bindFollowButtons();
-        }
-      });
-    });
-  }
-
   bindFollowButtons();
 
-  document.getElementById("addCollectionForm")?.addEventListener("submit",event=>{
+  document.getElementById("addCollectionForm")?.addEventListener("submit",async event=>{
     event.preventDefault();
+    if(!currentUser) return;
     const fd=new FormData(event.currentTarget);
-    state.collection.unshift({
-      id:crypto.randomUUID(),
+
+    const {error}=await supabase.from("collection_items").insert({
+      user_id:currentUser.id,
       kind:"mini",
-      name:fd.get("name"),
-      faction:fd.get("faction"),
-      status:fd.get("status"),
+      name:String(fd.get("name")||"").trim(),
+      faction:String(fd.get("faction")||"").trim(),
+      status:String(fd.get("status")||""),
+      quantity:1,
       cost:Number(fd.get("cost")||0),
-      emoji:"🎨"
+      visibility:"public"
     });
-    saveState();
+
+    if(error){
+      console.error(error);
+      toast("No se pudo guardar");
+      return;
+    }
     toast("Añadido a tu pila");
-    setRoute("collection");
+    route="collection";
+    await loadCloudState();
   });
 
-  document.getElementById("addMaterialForm")?.addEventListener("submit",event=>{
+  document.getElementById("addMaterialForm")?.addEventListener("submit",async event=>{
     event.preventDefault();
+    if(!currentUser) return;
     const fd=new FormData(event.currentTarget);
-    const category=String(fd.get("category")||"Otro");
-    const emojiMap={
-      "Pintura":"🎨",
-      "Pincel":"🖌️",
-      "Herramienta":"🛠️",
-      "Otro":"📦"
-    };
-    state.collection.unshift({
-      id:crypto.randomUUID(),
+
+    const {error}=await supabase.from("collection_items").insert({
+      user_id:currentUser.id,
       kind:"material",
-      name:fd.get("name"),
-      category,
-      faction:String(fd.get("brand")||"").trim() || category,
+      name:String(fd.get("name")||"").trim(),
+      category:String(fd.get("category")||"Otro"),
       brand:String(fd.get("brand")||"").trim(),
       quantity:Number(fd.get("quantity")||1),
       cost:Number(fd.get("cost")||0),
-      emoji:emojiMap[category] || "📦"
+      visibility:"public"
     });
-    saveState();
+
+    if(error){
+      console.error(error);
+      toast("No se pudo guardar");
+      return;
+    }
     toast("Material añadido");
-    setRoute("collection");
+    route="collection";
+    await loadCloudState();
   });
 
-  document.getElementById("postForm")?.addEventListener("submit",event=>{
+  document.getElementById("postForm")?.addEventListener("submit",async event=>{
     event.preventDefault();
+    if(!currentUser) return;
     const fd=new FormData(event.currentTarget);
-    state.posts.unshift({
-      id:crypto.randomUUID(),
-      author:state.user.name,
-      authorHandle:state.user.handle,
-      initials:state.user.name[0]?.toUpperCase()||"P",
-      text:fd.get("text"),
-      likes:0,
-      comments:0,
-      time:"Ahora",
-      emoji:"✨",
-      visibility:String(fd.get("visibility") || "public"),
-      likedByMe:false
+
+    const {error}=await supabase.from("posts").insert({
+      user_id:currentUser.id,
+      body:String(fd.get("text")||"").trim(),
+      visibility:String(fd.get("visibility")||"public")
     });
-    saveState();
+
+    if(error){
+      console.error(error);
+      toast("No se pudo publicar");
+      return;
+    }
     toast("Publicado");
-    setRoute("feed");
+    route="feed";
+    await loadCloudState();
   });
 
   document.getElementById("editProfileBtn")?.addEventListener("click",openProfileEditor);
@@ -727,9 +798,35 @@ function render(){
       render();
     });
   });
+}
 
-  headerAvatar();
-  syncNav();
+function bindFollowButtons(){
+  document.querySelectorAll("[data-person-id]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      if(!currentUser) return;
+      const person=state.people.find(p=>p.id===btn.dataset.personId);
+      if(!person) return;
+      btn.disabled=true;
+
+      const result=person.following
+        ? await supabase.from("follows")
+            .delete()
+            .eq("follower_id",currentUser.id)
+            .eq("following_id",person.id)
+        : await supabase.from("follows")
+            .insert({follower_id:currentUser.id,following_id:person.id});
+
+      if(result.error){
+        console.error(result.error);
+        toast("No se pudo cambiar el seguimiento");
+        btn.disabled=false;
+        return;
+      }
+
+      person.following=!person.following;
+      render();
+    });
+  });
 }
 
 function syncNav(){
@@ -745,7 +842,7 @@ function setRoute(next){
 
 function populateFactionSelect(){
   const select=document.getElementById("favoriteFactionSelect");
-  select.innerHTML = ["40K","Sigmar","Fantasy","—"].map(universe=>{
+  select.innerHTML=["40K","Sigmar","Fantasy","—"].map(universe=>{
     const options=factions.filter(f=>f.universe===universe)
       .map(f=>`<option value="${f.id}">${f.name}</option>`).join("");
     return `<optgroup label="${universe}">${options}</optgroup>`;
@@ -760,75 +857,380 @@ function openProfileEditor(){
   form.elements.favoriteFaction.value=state.user.favoriteFaction;
   dialog.showModal();
 }
-function fileToDataURL(file){
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onload=()=>resolve(reader.result);
-    reader.onerror=reject;
-    reader.readAsDataURL(file);
+async function uploadProfileMedia(file,kind){
+  if(!file || !currentUser) return "";
+  const extension=(file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g,"");
+  const path=`${currentUser.id}/${kind}-${Date.now()}.${extension || "jpg"}`;
+
+  const {error}=await supabase.storage.from("profile-media").upload(path,file,{
+    cacheControl:"3600",
+    upsert:true
   });
+  if(error) throw error;
+
+  const {data}=supabase.storage.from("profile-media").getPublicUrl(path);
+  return data.publicUrl;
 }
 
-document.getElementById("notifBtn").addEventListener("click",()=>{
-  document.getElementById("notificationsDialog").showModal();
-});
-document.getElementById("settingsBtn").addEventListener("click",()=>{
-  document.getElementById("settingsDialog").showModal();
-  setTheme(getTheme(),false);
-});
-document.querySelectorAll("[data-close]").forEach(btn=>{
-  btn.addEventListener("click",()=>document.getElementById(btn.dataset.close).close());
-});
-document.querySelectorAll("[data-pick-theme]").forEach(btn=>{
-  btn.addEventListener("click",()=>pickTheme(btn.dataset.pickTheme));
-});
-document.querySelectorAll("[data-quick-theme]").forEach(btn=>{
-  btn.addEventListener("click",()=>{
-    setTheme(btn.dataset.quickTheme);
-    render();
+async function exportBackup(){
+  if(!currentUser) return;
+
+  const uid=currentUser.id;
+  const [profile,posts,collection,projects,wishlist,follows]=await Promise.all([
+    supabase.from("profiles").select("*").eq("id",uid).single(),
+    supabase.from("posts").select("*").eq("user_id",uid).order("created_at"),
+    supabase.from("collection_items").select("*").eq("user_id",uid).order("created_at"),
+    supabase.from("projects").select("*").eq("user_id",uid).order("created_at"),
+    supabase.from("wishlist_items").select("*").eq("user_id",uid).order("created_at"),
+    supabase.from("follows").select("following_id").eq("follower_id",uid)
+  ]);
+
+  const failed=[profile,posts,collection,projects,wishlist,follows].find(r=>r.error);
+  if(failed){
+    console.error(failed.error);
+    toast("No se pudo crear la copia");
+    return;
+  }
+
+  const backup={
+    format:"pile-of-shame-backup",
+    version:1,
+    created_at:new Date().toISOString(),
+    profile:profile.data,
+    posts:posts.data,
+    collection:collection.data,
+    projects:projects.data,
+    wishlist:wishlist.data,
+    following:(follows.data || []).map(x=>x.following_id)
+  };
+
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=`pile-of-shame-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function importBackup(file){
+  if(!currentUser || !file) return;
+
+  let backup;
+  try{
+    backup=JSON.parse(await file.text());
+  }catch{
+    toast("El archivo no es válido");
+    return;
+  }
+
+  if(backup?.format!=="pile-of-shame-backup"){
+    toast("No es una copia de PILE OF SHAME");
+    return;
+  }
+
+  const uid=currentUser.id;
+  const operations=[];
+
+  if(backup.profile){
+    operations.push(
+      supabase.from("profiles").update({
+        display_name:backup.profile.display_name || state.user.name,
+        bio:backup.profile.bio || "",
+        favorite_faction:backup.profile.favorite_faction || "none",
+        avatar_url:backup.profile.avatar_url || "",
+        banner_url:backup.profile.banner_url || ""
+      }).eq("id",uid)
+    );
+  }
+
+  if(Array.isArray(backup.collection) && backup.collection.length){
+    operations.push(
+      supabase.from("collection_items").insert(
+        backup.collection.map(item=>({
+          user_id:uid,
+          kind:item.kind,
+          name:item.name,
+          faction:item.faction || "",
+          category:item.category || "",
+          brand:item.brand || "",
+          status:item.status || "",
+          quantity:item.quantity || 1,
+          cost:item.cost || 0,
+          purchase_date:item.purchase_date || null,
+          notes:item.notes || "",
+          visibility:item.visibility || "public"
+        }))
+      )
+    );
+  }
+
+  if(Array.isArray(backup.posts) && backup.posts.length){
+    operations.push(
+      supabase.from("posts").insert(
+        backup.posts.map(post=>({
+          user_id:uid,
+          body:post.body,
+          visibility:post.visibility || "public"
+        }))
+      )
+    );
+  }
+
+  const results=await Promise.all(operations);
+  const failed=results.find(r=>r.error);
+  if(failed){
+    console.error(failed.error);
+    toast("La copia se restauró solo parcialmente");
+  }else{
+    toast("Copia restaurada");
+  }
+
+  document.getElementById("settingsDialog")?.close();
+  await loadCloudState();
+}
+
+function setAuthTab(tab){
+  document.querySelectorAll("[data-auth-tab]").forEach(btn=>{
+    btn.classList.toggle("active",btn.dataset.authTab===tab);
   });
-});
-document.querySelectorAll("[data-settings-theme]").forEach(btn=>{
-  btn.addEventListener("click",()=>{
-    setTheme(btn.dataset.settingsTheme);
-    render();
-  });
-});
-document.getElementById("showFateAgain").addEventListener("click",()=>{
-  document.getElementById("settingsDialog").close();
-  openFateGate();
-});
-document.getElementById("profileForm").addEventListener("submit",async event=>{
+  document.getElementById("loginForm").hidden=tab!=="login";
+  document.getElementById("signupForm").hidden=tab!=="signup";
+  setAuthMessage("");
+}
+
+async function handleLogin(event){
   event.preventDefault();
-  const form=event.currentTarget;
-  const fd=new FormData(form);
+  const fd=new FormData(event.currentTarget);
+  const handle=normalizeHandle(fd.get("handle"));
+  const password=String(fd.get("password")||"");
 
-  state.user.name=String(fd.get("name")||"").trim();
-  state.user.handle=String(fd.get("handle")||"").trim();
-  state.user.bio=String(fd.get("bio")||"").trim();
-  state.user.favoriteFaction=String(fd.get("favoriteFaction")||"none");
+  if(handle.length<3){
+    setAuthMessage("El @usuario no es válido.",true);
+    return;
+  }
 
-  const avatarFile=form.elements.avatarFile.files?.[0];
-  const bannerFile=form.elements.bannerFile.files?.[0];
-  if(avatarFile) state.user.avatarData=await fileToDataURL(avatarFile);
-  if(bannerFile) state.user.bannerData=await fileToDataURL(bannerFile);
+  setAuthMessage("Entrando…");
+  const {data,error}=await supabase.auth.signInWithPassword({
+    email:credentialEmail(handle),
+    password
+  });
 
-  saveState();
-  document.getElementById("editProfileDialog").close();
-  toast("Perfil actualizado");
-  render();
-});
+  if(error){
+    console.error(error);
+    setAuthMessage("Usuario o contraseña incorrectos.",true);
+    return;
+  }
 
-populateFactionSelect();
-setTheme(getTheme(),false);
-render();
+  currentUser=data.user;
+  hideAuthGate();
+  setAuthMessage("");
+  await loadCloudState();
 
-if(!localStorage.getItem(SEEN_FATE_KEY)){
-  openFateGate();
+  if(!localStorage.getItem(SEEN_FATE_KEY)) openFateGate();
 }
 
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("./sw.js").catch(()=>{});
+async function handleSignup(event){
+  event.preventDefault();
+  const fd=new FormData(event.currentTarget);
+
+  const displayName=String(fd.get("name")||"").trim();
+  const handle=normalizeHandle(fd.get("handle"));
+  const password=String(fd.get("password")||"");
+  const password2=String(fd.get("password2")||"");
+
+  if(handle.length<3 || handle.length>24){
+    setAuthMessage("El @usuario debe tener entre 3 y 24 caracteres.",true);
+    return;
+  }
+  if(password!==password2){
+    setAuthMessage("Las contraseñas no coinciden.",true);
+    return;
+  }
+
+  setAuthMessage("Creando cuenta…");
+
+  const {data:existing,error:checkError}=await supabase
+    .from("profiles")
+    .select("id")
+    .eq("handle",handle)
+    .maybeSingle();
+
+  if(checkError){
+    console.error(checkError);
+    setAuthMessage("No se pudo comprobar el usuario. ¿Has ejecutado el SQL de instalación?",true);
+    return;
+  }
+  if(existing){
+    setAuthMessage("Ese @usuario ya existe.",true);
+    return;
+  }
+
+  const {data,error}=await supabase.auth.signUp({
+    email:credentialEmail(handle),
+    password,
+    options:{
+      data:{
+        handle,
+        display_name:displayName
+      }
+    }
+  });
+
+  if(error){
+    console.error(error);
+    setAuthMessage(error.message || "No se pudo crear la cuenta.",true);
+    return;
+  }
+
+  if(!data.session){
+    setAuthMessage("La cuenta se creó, pero falta desactivar Confirm Email en Supabase para poder entrar sin correo.",true);
+    return;
+  }
+
+  currentUser=data.user;
+  hideAuthGate();
+  setAuthMessage("");
+  await loadCloudState();
+
+  if(!localStorage.getItem(SEEN_FATE_KEY)) openFateGate();
+}
+
+function bindStaticEvents(){
+  document.querySelectorAll("[data-auth-tab]").forEach(btn=>{
+    btn.addEventListener("click",()=>setAuthTab(btn.dataset.authTab));
+  });
+
+  document.getElementById("loginForm").addEventListener("submit",handleLogin);
+  document.getElementById("signupForm").addEventListener("submit",handleSignup);
+
+  document.getElementById("notifBtn").addEventListener("click",()=>{
+    document.getElementById("notificationsDialog").showModal();
+  });
+
+  document.getElementById("settingsBtn").addEventListener("click",()=>{
+    document.getElementById("settingsDialog").showModal();
+    setTheme(getTheme(),false);
+  });
+
+  document.querySelectorAll("[data-close]").forEach(btn=>{
+    btn.addEventListener("click",()=>document.getElementById(btn.dataset.close).close());
+  });
+
+  document.querySelectorAll("[data-pick-theme]").forEach(btn=>{
+    btn.addEventListener("click",()=>pickTheme(btn.dataset.pickTheme));
+  });
+
+  document.querySelectorAll("[data-quick-theme]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      setTheme(btn.dataset.quickTheme);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-settings-theme]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      setTheme(btn.dataset.settingsTheme);
+      render();
+    });
+  });
+
+  document.getElementById("showFateAgain").addEventListener("click",()=>{
+    document.getElementById("settingsDialog").close();
+    openFateGate();
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click",async()=>{
+    await supabase.auth.signOut();
+    currentUser=null;
+    state=emptyState();
+    document.getElementById("settingsDialog").close();
+    showAuthGate();
+    render();
+  });
+
+  document.getElementById("exportBackupBtn").addEventListener("click",exportBackup);
+  document.getElementById("importBackupInput").addEventListener("change",async event=>{
+    const file=event.currentTarget.files?.[0];
+    if(file) await importBackup(file);
+    event.currentTarget.value="";
+  });
+
+  document.getElementById("profileForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(!currentUser) return;
+
+    const form=event.currentTarget;
+    const fd=new FormData(form);
+
+    try{
+      let avatarUrl=state.user.avatarData;
+      let bannerUrl=state.user.bannerData;
+
+      const avatarFile=form.elements.avatarFile.files?.[0];
+      const bannerFile=form.elements.bannerFile.files?.[0];
+
+      if(avatarFile) avatarUrl=await uploadProfileMedia(avatarFile,"avatar");
+      if(bannerFile) bannerUrl=await uploadProfileMedia(bannerFile,"banner");
+
+      const {error}=await supabase.from("profiles").update({
+        display_name:String(fd.get("name")||"").trim(),
+        bio:String(fd.get("bio")||"").trim(),
+        favorite_faction:String(fd.get("favoriteFaction")||"none"),
+        avatar_url:avatarUrl || "",
+        banner_url:bannerUrl || ""
+      }).eq("id",currentUser.id);
+
+      if(error) throw error;
+
+      document.getElementById("editProfileDialog").close();
+      toast("Perfil actualizado");
+      await loadCloudState();
+    }catch(error){
+      console.error(error);
+      toast("No se pudo actualizar el perfil");
+    }
   });
 }
+
+async function init(){
+  populateFactionSelect();
+  setTheme(getTheme(),false);
+  bindStaticEvents();
+
+  const {data:{session},error}=await supabase.auth.getSession();
+  if(error) console.error(error);
+
+  if(session?.user){
+    currentUser=session.user;
+    hideAuthGate();
+    try{
+      await loadCloudState();
+      if(!localStorage.getItem(SEEN_FATE_KEY)) openFateGate();
+    }catch(error){
+      console.error(error);
+      showAuthGate();
+      setAuthMessage("No se pudo cargar la base de datos. Ejecuta supabase_setup.sql en Supabase.",true);
+    }
+  }else{
+    showAuthGate();
+    render();
+  }
+
+  supabase.auth.onAuthStateChange(async(event,session)=>{
+    if(event==="SIGNED_OUT"){
+      currentUser=null;
+      state=emptyState();
+      showAuthGate();
+      render();
+    }
+  });
+
+  if("serviceWorker" in navigator){
+    window.addEventListener("load",()=>{
+      navigator.serviceWorker.register("./sw.js").catch(()=>{});
+    });
+  }
+}
+
+init();

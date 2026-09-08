@@ -1,4 +1,4 @@
-# PILE OF SHAME — V8 Social
+# PILE OF SHAME — V9 Supabase
 
 Prototipo visual funcional de la PWA.
 
@@ -133,3 +133,10 @@ Correspondencia:
 > Nota: esta V8 sigue siendo un prototipo local. La unicidad real del like,
 > permisos de privacidad, seguidores y cuentas se reforzarán también en la
 > base de datos cuando conectemos Supabase.
+
+
+## V9 — Backend real
+
+Esta versión deja de usar usuarios simulados y conecta la app con Supabase.
+
+Lee primero `SETUP_SUPABASE.md` y ejecuta `supabase_setup.sql` antes de probar el registro.

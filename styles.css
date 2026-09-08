@@ -1135,3 +1135,112 @@ body[data-theme="fantasy"] .add-accordion{
     padding:9px 10px;
   }
 }
+
+
+/* =========================================================
+   V9 — AUTENTICACIÓN + SUPABASE
+   ========================================================= */
+
+.auth-gate{
+  position:fixed;
+  inset:0;
+  z-index:160;
+  display:none;
+  place-items:center;
+  padding:18px;
+}
+.auth-gate.open{display:grid}
+.auth-backdrop{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 50% 0%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 35%),
+    linear-gradient(180deg,#05070a,#0c0b0a 75%,#120b08);
+}
+.auth-panel{
+  position:relative;
+  z-index:1;
+  width:min(440px,100%);
+  max-height:94vh;
+  overflow:auto;
+  border:1px solid var(--line);
+  background:color-mix(in srgb,var(--surface) 97%,transparent);
+  border-radius:20px;
+  padding:18px;
+  box-shadow:0 24px 80px rgba(0,0,0,.55);
+  backdrop-filter:blur(18px);
+}
+.auth-logo-wrap{
+  display:flex;
+  justify-content:center;
+  min-height:92px;
+  align-items:center;
+  margin-bottom:8px;
+}
+.auth-logo{
+  display:block;
+  width:min(100%,360px);
+  max-height:100px;
+  object-fit:contain;
+  filter:drop-shadow(0 8px 14px rgba(0,0,0,.45));
+}
+.auth-tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:5px;
+  padding:4px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface-2);
+  margin:0 0 14px;
+}
+.auth-tab{
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:var(--muted);
+  padding:10px;
+  cursor:pointer;
+  font-weight:900;
+}
+.auth-tab.active{
+  background:color-mix(in srgb,var(--accent) 12%,var(--surface));
+  color:var(--accent-2);
+}
+.auth-form{
+  display:grid;
+  gap:12px;
+}
+.auth-form small{
+  color:var(--muted);
+  font-weight:400;
+}
+.auth-message{
+  min-height:20px;
+  margin-top:12px;
+  color:var(--accent-2);
+  font-size:.78rem;
+}
+.auth-message.error{color:#ff9b9b}
+.auth-note{
+  color:var(--muted);
+  font-size:.7rem;
+  line-height:1.45;
+  margin:12px 0 0;
+}
+.cloud-loading{
+  padding:38px 16px;
+  text-align:center;
+  color:var(--muted);
+}
+.cloud-loading strong{
+  display:block;
+  color:var(--text);
+  margin-bottom:6px;
+  font-family:var(--display-font);
+}
+
+@media(max-width:620px){
+  .auth-panel{padding:15px}
+  .auth-logo{max-height:82px}
+}

@@ -1,10 +1,11 @@
 
-const CACHE="pile-of-shame-v8-shell";
+const CACHE="pile-of-shame-v9-shell";
 const ASSETS=[
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./supabase-config.js",
   "./manifest.webmanifest",
   "./assets/app-icon.png"
 ];
