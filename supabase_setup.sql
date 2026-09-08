@@ -351,6 +351,27 @@ to authenticated
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
+
+
+-- ---------- API GRANTS EXPLÍCITOS ----------
+-- Supabase suele gestionar estos permisos por defecto, pero los dejamos
+-- explícitos para que PostgREST pueda acceder a las tablas según RLS.
+
+grant usage on schema public to anon, authenticated;
+
+grant select on public.profiles to anon, authenticated;
+grant update on public.profiles to authenticated;
+
+grant select, insert, delete on public.follows to authenticated;
+
+grant select, insert, update, delete on public.posts to authenticated;
+grant select, insert, delete on public.post_likes to authenticated;
+grant select, insert, delete on public.comments to authenticated;
+
+grant select, insert, update, delete on public.collection_items to authenticated;
+grant select, insert, update, delete on public.projects to authenticated;
+grant select, insert, update, delete on public.wishlist_items to authenticated;
+
 -- ---------- PUBLIC PROFILE MEDIA ----------
 insert into storage.buckets (id, name, public)
 values ('profile-media', 'profile-media', true)

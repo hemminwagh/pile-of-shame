@@ -1,4 +1,4 @@
-# PILE OF SHAME — V9 Supabase
+# PILE OF SHAME — V9.1 Supabase Fix
 
 Prototipo visual funcional de la PWA.
 
@@ -140,3 +140,9 @@ Correspondencia:
 Esta versión deja de usar usuarios simulados y conecta la app con Supabase.
 
 Lee primero `SETUP_SUPABASE.md` y ejecuta `supabase_setup.sql` antes de probar el registro.
+
+
+## V9.1
+- Eliminada la comprobación anónima previa del @usuario.
+- Añadidos permisos SQL explícitos para `anon` y `authenticated`.
+- Mensajes de error de registro más claros.

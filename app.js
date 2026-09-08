@@ -1050,22 +1050,6 @@ async function handleSignup(event){
 
   setAuthMessage("Creando cuenta…");
 
-  const {data:existing,error:checkError}=await supabase
-    .from("profiles")
-    .select("id")
-    .eq("handle",handle)
-    .maybeSingle();
-
-  if(checkError){
-    console.error(checkError);
-    setAuthMessage("No se pudo comprobar el usuario. ¿Has ejecutado el SQL de instalación?",true);
-    return;
-  }
-  if(existing){
-    setAuthMessage("Ese @usuario ya existe.",true);
-    return;
-  }
-
   const {data,error}=await supabase.auth.signUp({
     email:credentialEmail(handle),
     password,
@@ -1079,7 +1063,14 @@ async function handleSignup(event){
 
   if(error){
     console.error(error);
-    setAuthMessage(error.message || "No se pudo crear la cuenta.",true);
+    const msg=String(error.message || "");
+    if(msg.toLowerCase().includes("database error")){
+      setAuthMessage("La base de datos no ha quedado instalada correctamente. Ejecuta el SQL de V9.1 completo en Supabase.",true);
+    }else if(msg.toLowerCase().includes("already") || msg.toLowerCase().includes("registered")){
+      setAuthMessage("Ese @usuario ya está registrado.",true);
+    }else{
+      setAuthMessage(msg || "No se pudo crear la cuenta.",true);
+    }
     return;
   }
 

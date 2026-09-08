@@ -1,4 +1,4 @@
-# PILE OF SHAME V9 — Conectar Supabase
+# PILE OF SHAME V9.1 — Conectar Supabase
 
 Tu proyecto ya viene configurado para:
 
@@ -115,3 +115,15 @@ La restauración está pensada para recuperar **tus datos** dentro de una cuenta
 - Proyectos completos.
 - Wishlist completa.
 - Ver el perfil/colección de otra persona al pulsar su usuario.
+
+
+## Si venías de V9 y te salía “No se puede comprobar el usuario”
+
+Ejecuta de nuevo **todo** el archivo `supabase_setup.sql` de esta V9.1.
+
+El script usa `create table if not exists`, `create or replace` y recrea las
+políticas de forma segura, así que puedes ejecutarlo aunque ya hubieras probado
+la V9.
+
+La V9.1 además ya no consulta `profiles` antes del registro: deja que PostgreSQL
+controle directamente si el `@usuario` es único.
