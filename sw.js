@@ -1,5 +1,5 @@
 
-const CACHE="pile-of-shame-v3-shell";
+const CACHE="pile-of-shame-v4-shell";
 const ASSETS=[
   "./",
   "./index.html",

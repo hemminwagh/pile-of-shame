@@ -1,4 +1,4 @@
-# PILE OF SHAME — Identidad visual V3
+# PILE OF SHAME — Identidad visual V4
 
 Prototipo visual funcional de la PWA.
 
@@ -9,7 +9,7 @@ Prototipo visual funcional de la PWA.
   - **40K** — industrial / azul oscuro / cian.
   - **SIGMAR** — negro azulado / oro.
   - **FANTASY** — pergamino oscuro / borgoña / oro viejo.
-- Tres logos gráficos PILE OF SHAME integrados como assets reales: 40K, Sigmar y Fantasy.
+- Tres logos-imagen reales PILE OF SHAME integrados como assets visuales completos: 40K, Sigmar y Fantasy.
 - Feed rediseñado.
 - Barra inferior rediseñada.
 - Botón central de añadir diferenciado por tema.
@@ -66,3 +66,9 @@ Cerrar esta dirección visual contigo y después conectar Supabase:
 6. Comentarios y reacciones.
 7. Fotos.
 8. Notificaciones.
+
+
+## Ajuste V4
+Los logos del header y del selector de tema se han reemplazado por recortes más
+grandes y completos, con su placa/ornamento/pergamino, para que se vean como
+imagen visual real y no como simple lettering estilizado.
