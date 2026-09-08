@@ -1,15 +1,12 @@
 
-const CACHE="pile-of-shame-v4-shell";
+const CACHE="pile-of-shame-v5-shell";
 const ASSETS=[
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
-  "./assets/app-icon.png",
-  "./assets/logo-40k.png",
-  "./assets/logo-sigmar.png",
-  "./assets/logo-fantasy.png"
+  "./assets/app-icon.png"
 ];
 
 self.addEventListener("install",event=>{

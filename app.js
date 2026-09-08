@@ -87,23 +87,24 @@ function setTheme(theme, persist=true){
   document.body.dataset.theme=theme;
   if(persist) localStorage.setItem(THEME_KEY,theme);
 
+  const logoStore=document.getElementById("embeddedLogoStore");
   const metas={
     "40k":{
       themeColor:"#07131b",
-      logo:"./assets/logo-40k.png"
+      logo:logoStore?.dataset.logo40k || ""
     },
     "sigmar":{
       themeColor:"#070c10",
-      logo:"./assets/logo-sigmar.png"
+      logo:logoStore?.dataset.logoSigmar || ""
     },
     "fantasy":{
       themeColor:"#17110c",
-      logo:"./assets/logo-fantasy.png"
+      logo:logoStore?.dataset.logoFantasy || ""
     }
   };
 
   const brandLogo=document.getElementById("brandLogo");
-  if(brandLogo) brandLogo.src=metas[theme].logo;
+  if(brandLogo && metas[theme].logo) brandLogo.src=metas[theme].logo;
 
   document.querySelector('meta[name="theme-color"]').setAttribute("content",metas[theme].themeColor);
 

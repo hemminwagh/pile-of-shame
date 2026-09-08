@@ -1,4 +1,4 @@
-# PILE OF SHAME — Identidad visual V4
+# PILE OF SHAME — Identidad visual V5
 
 Prototipo visual funcional de la PWA.
 
@@ -72,3 +72,11 @@ Cerrar esta dirección visual contigo y después conectar Supabase:
 Los logos del header y del selector de tema se han reemplazado por recortes más
 grandes y completos, con su placa/ornamento/pergamino, para que se vean como
 imagen visual real y no como simple lettering estilizado.
+
+
+## Corrección V5 — logos embebidos
+
+Los tres logos están ahora incrustados directamente en `index.html` como imágenes
+PNG codificadas en data URI. El navegador ya no depende de encontrar
+`assets/logo-40k.png`, `logo-sigmar.png` o `logo-fantasy.png`, por lo que el logo
+no se rompe al mover archivos, probar localmente o desplegar en GitHub Pages.
