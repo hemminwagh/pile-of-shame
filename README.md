@@ -1,4 +1,4 @@
-# PILE OF SHAME — V9.4 Auth + Cache Fix
+# PILE OF SHAME — V9.5 Anonymous Auth
 
 Prototipo visual funcional de la PWA.
 
@@ -168,3 +168,13 @@ Lee primero `SETUP_SUPABASE.md` y ejecuta `supabase_setup.sql` antes de probar e
 - Service Worker en modo network-first durante desarrollo.
 - Incluye `reset-cache.html` para eliminar caches/service workers antiguos sin borrar los datos locales.
 - No hace falta repetir el SQL.
+
+
+## V9.5
+- Eliminados por completo los emails técnicos falsos.
+- Registro sin correo, teléfono ni contraseña.
+- Supabase Anonymous Sign-Ins.
+- Sesión persistente por dispositivo.
+- Archivo de recuperación automático.
+- Recuperación de cuenta mediante RPC segura y secreto SHA-256.
+- El backup completo incluye también la clave de recuperación.

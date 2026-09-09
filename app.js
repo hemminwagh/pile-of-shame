@@ -11,6 +11,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
 
 const THEME_KEY = "pile-of-shame-theme";
 const SEEN_FATE_KEY = "pile-of-shame-seen-fate";
+const RECOVERY_SECRET_KEY = "pile-of-shame-recovery-secret";
 
 const factions = [
   { id:"orks", name:"Orks", universe:"40K", icon:"☠" },
@@ -69,15 +70,42 @@ function normalizeHandle(raw=""){
     .replace(/^@+/,"")
     .replace(/[^a-z0-9_]/g,"");
 }
-function credentialEmail(handle){
-  // Dirección técnica interna para Supabase Auth.
-  // El usuario nunca la ve ni tiene que introducir un email real.
-  return `${normalizeHandle(handle)}@users.pileofshame.app`;
-}
+
 function displayHandle(handle=""){
   const h=normalizeHandle(handle);
   return h ? `@${h}` : "";
 }
+function randomRecoverySecret(){
+  const bytes=new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function sha256Hex(text){
+  const data=new TextEncoder().encode(String(text));
+  const digest=await crypto.subtle.digest("SHA-256",data);
+  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+}
+function downloadJson(filename,data){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),500);
+}
+function makeRecoveryFile(handle,secret){
+  return {
+    format:"pile-of-shame-recovery",
+    version:1,
+    created_at:new Date().toISOString(),
+    handle:normalizeHandle(handle),
+    recovery_secret:secret
+  };
+}
+
 function relativeTime(iso){
   if(!iso) return "";
   const ms=Date.now()-new Date(iso).getTime();
@@ -903,7 +931,11 @@ async function exportBackup(){
     collection:collection.data,
     projects:projects.data,
     wishlist:wishlist.data,
-    following:(follows.data || []).map(x=>x.following_id)
+    following:(follows.data || []).map(x=>x.following_id),
+    recovery:{
+      handle:profile.data?.handle || normalizeHandle(state.user.handle),
+      recovery_secret:localStorage.getItem(RECOVERY_SECRET_KEY) || ""
+    }
   };
 
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});
@@ -993,7 +1025,7 @@ async function importBackup(file){
 }
 
 function setAuthTab(tab){
-  const validTab=tab==="signup" ? "signup" : "login";
+  const validTab=tab==="restore" ? "restore" : "signup";
 
   document.querySelectorAll("[data-auth-tab]").forEach(btn=>{
     const selected=btn.dataset.authTab===validTab;
@@ -1003,16 +1035,11 @@ function setAuthTab(tab){
 
   document.querySelectorAll("[data-auth-view]").forEach(form=>{
     const active=form.dataset.authView===validTab;
-
     form.hidden=!active;
     form.classList.toggle("active",active);
     form.setAttribute("aria-hidden",active ? "false" : "true");
+    form.style.setProperty("display",active ? "grid" : "none","important");
 
-    // Forzamos display inline con !important para que ningún CSS cacheado pueda
-    // volver a mostrar ambos formularios a la vez en Safari.
-    form.style.setProperty("display", active ? "grid" : "none", "important");
-
-    // Un formulario inactivo ni se ve ni participa en validación/autofill/submit.
     form.querySelectorAll("input, textarea, select, button").forEach(control=>{
       control.disabled=!active;
     });
@@ -1021,36 +1048,7 @@ function setAuthTab(tab){
   setAuthMessage("");
 }
 
-async function handleLogin(event){
-  event.preventDefault();
-  const fd=new FormData(event.currentTarget);
-  const handle=normalizeHandle(fd.get("handle"));
-  const password=String(fd.get("password")||"");
 
-  if(handle.length<3){
-    setAuthMessage("El @usuario no es válido.",true);
-    return;
-  }
-
-  setAuthMessage("Entrando…");
-  const {data,error}=await supabase.auth.signInWithPassword({
-    email:credentialEmail(handle),
-    password
-  });
-
-  if(error){
-    console.error(error);
-    setAuthMessage("Usuario o contraseña incorrectos.",true);
-    return;
-  }
-
-  currentUser=data.user;
-  hideAuthGate();
-  setAuthMessage("");
-  await loadCloudState();
-
-  if(!localStorage.getItem(SEEN_FATE_KEY)) openFateGate();
-}
 
 async function handleSignup(event){
   event.preventDefault();
@@ -1058,27 +1056,41 @@ async function handleSignup(event){
 
   const displayName=String(fd.get("name")||"").trim();
   const handle=normalizeHandle(fd.get("handle"));
-  const password=String(fd.get("password")||"");
-  const password2=String(fd.get("password2")||"");
 
   if(handle.length<3 || handle.length>24){
     setAuthMessage("El @usuario debe tener entre 3 y 24 caracteres.",true);
     return;
   }
-  if(password!==password2){
-    setAuthMessage("Las contraseñas no coinciden.",true);
+
+  setAuthMessage("Comprobando @usuario…");
+
+  const {data:existing,error:checkError}=await supabase
+    .from("profiles")
+    .select("id")
+    .eq("handle",handle)
+    .maybeSingle();
+
+  if(checkError){
+    console.error(checkError);
+    setAuthMessage("No se pudo comprobar el @usuario. Ejecuta el parche SQL de V9.5.",true);
+    return;
+  }
+  if(existing){
+    setAuthMessage("Ese @usuario ya existe.",true);
     return;
   }
 
-  setAuthMessage("Creando cuenta…");
+  const recoverySecret=randomRecoverySecret();
+  const recoveryHash=await sha256Hex(recoverySecret);
 
-  const {data,error}=await supabase.auth.signUp({
-    email:credentialEmail(handle),
-    password,
+  setAuthMessage("Creando perfil…");
+
+  const {data,error}=await supabase.auth.signInAnonymously({
     options:{
       data:{
         handle,
-        display_name:displayName
+        display_name:displayName,
+        recovery_hash:recoveryHash
       }
     }
   });
@@ -1086,27 +1098,111 @@ async function handleSignup(event){
   if(error){
     console.error(error);
     const msg=String(error.message || "");
-    if(msg.toLowerCase().includes("database error")){
-      setAuthMessage("La base de datos no ha quedado instalada correctamente. Ejecuta el SQL de V9.1 completo en Supabase.",true);
-    }else if(msg.toLowerCase().includes("already") || msg.toLowerCase().includes("registered")){
-      setAuthMessage("Ese @usuario ya está registrado.",true);
+    if(msg.toLowerCase().includes("anonymous") || msg.toLowerCase().includes("disabled")){
+      setAuthMessage("Activa “Allow anonymous sign-ins” en Supabase Authentication.",true);
+    }else if(msg.toLowerCase().includes("database")){
+      setAuthMessage("Falta ejecutar supabase_v9_5_auth_patch.sql.",true);
     }else{
-      setAuthMessage(msg || "No se pudo crear la cuenta.",true);
+      setAuthMessage(msg || "No se pudo crear el perfil.",true);
     }
     return;
   }
 
-  if(!data.session){
-    setAuthMessage("La cuenta se creó, pero falta desactivar Confirm Email en Supabase para poder entrar sin correo.",true);
-    return;
-  }
-
   currentUser=data.user;
+  localStorage.setItem(RECOVERY_SECRET_KEY,recoverySecret);
+
   hideAuthGate();
   setAuthMessage("");
   await loadCloudState();
 
+  downloadJson(
+    `PILE_OF_SHAME_RECOVERY_${handle}.json`,
+    makeRecoveryFile(handle,recoverySecret)
+  );
+
+  toast("Perfil creado. Guarda el archivo de recuperación.");
+
   if(!localStorage.getItem(SEEN_FATE_KEY)) openFateGate();
+}
+
+async function handleRestore(event){
+  event.preventDefault();
+
+  const file=document.getElementById("restoreFile")?.files?.[0];
+  if(!file){
+    setAuthMessage("Selecciona una copia de recuperación.",true);
+    return;
+  }
+
+  let backup;
+  try{
+    backup=JSON.parse(await file.text());
+  }catch{
+    setAuthMessage("El archivo no es válido.",true);
+    return;
+  }
+
+  let handle="";
+  let secret="";
+
+  if(backup?.format==="pile-of-shame-recovery"){
+    handle=normalizeHandle(backup.handle);
+    secret=String(backup.recovery_secret || "");
+  }else if(backup?.format==="pile-of-shame-backup"){
+    handle=normalizeHandle(backup.recovery?.handle || backup.profile?.handle || "");
+    secret=String(backup.recovery?.recovery_secret || "");
+  }else{
+    setAuthMessage("Ese archivo no es una copia de PILE OF SHAME.",true);
+    return;
+  }
+
+  if(!handle || !secret){
+    setAuthMessage("La copia no contiene datos de recuperación.",true);
+    return;
+  }
+
+  setAuthMessage("Preparando recuperación…");
+
+  const tempHandle=`recover_${crypto.randomUUID().replace(/-/g,"").slice(0,10)}`;
+  const tempSecret=randomRecoverySecret();
+  const tempHash=await sha256Hex(tempSecret);
+
+  const {data,error}=await supabase.auth.signInAnonymously({
+    options:{
+      data:{
+        handle:tempHandle,
+        display_name:"Recuperando",
+        recovery_hash:tempHash
+      }
+    }
+  });
+
+  if(error){
+    console.error(error);
+    setAuthMessage("No se pudo iniciar la recuperación. ¿Está activado Anonymous Sign-Ins?",true);
+    return;
+  }
+
+  currentUser=data.user;
+
+  const {data:recovered,error:recoverError}=await supabase.rpc("recover_account",{
+    p_handle:handle,
+    p_secret:secret
+  });
+
+  if(recoverError || recovered!==true){
+    console.error(recoverError);
+    await supabase.auth.signOut();
+    currentUser=null;
+    setAuthMessage("No se pudo recuperar la cuenta. Comprueba que el archivo sea el correcto.",true);
+    return;
+  }
+
+  localStorage.setItem(RECOVERY_SECRET_KEY,secret);
+  hideAuthGate();
+  setAuthMessage("");
+  await loadCloudState();
+  toast("Cuenta recuperada");
 }
 
 function bindStaticEvents(){
@@ -1114,8 +1210,8 @@ function bindStaticEvents(){
     btn.addEventListener("click",()=>setAuthTab(btn.dataset.authTab));
   });
 
-  document.getElementById("loginForm").addEventListener("submit",handleLogin);
   document.getElementById("signupForm").addEventListener("submit",handleSignup);
+  document.getElementById("restoreForm").addEventListener("submit",handleRestore);
 
   document.getElementById("notifBtn").addEventListener("click",()=>{
     document.getElementById("notificationsDialog").showModal();
@@ -1154,11 +1250,19 @@ function bindStaticEvents(){
   });
 
   document.getElementById("logoutBtn").addEventListener("click",async()=>{
+    const hasRecovery=Boolean(localStorage.getItem(RECOVERY_SECRET_KEY));
+    const warning=hasRecovery
+      ? "Vas a salir de este dispositivo. Necesitarás tu archivo de recuperación para volver a esta cuenta. ¿Continuar?"
+      : "No hay una clave de recuperación guardada en este dispositivo. Si sales podrías perder el acceso a esta cuenta. ¿Continuar?";
+
+    if(!confirm(warning)) return;
+
     await supabase.auth.signOut();
     currentUser=null;
     state=emptyState();
     document.getElementById("settingsDialog").close();
     showAuthGate();
+    setAuthTab("signup");
     render();
   });
 
@@ -1210,7 +1314,7 @@ async function init(){
   populateFactionSelect();
   setTheme(getTheme(),false);
   bindStaticEvents();
-  setAuthTab("login");
+  setAuthTab("signup");
 
   const {data:{session},error}=await supabase.auth.getSession();
   if(error) console.error(error);
@@ -1228,6 +1332,7 @@ async function init(){
     }
   }else{
     showAuthGate();
+    setAuthTab("signup");
     render();
   }
 

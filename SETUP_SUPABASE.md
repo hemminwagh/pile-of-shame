@@ -1,142 +1,60 @@
-# PILE OF SHAME V9.2 — Conectar Supabase
+# PILE OF SHAME V9.5 — Auth sin correo ni teléfono
 
-Tu proyecto ya viene configurado para:
+Esta versión deja de inventar emails internos.
 
-- Project URL: `https://zxsbhgdjhcbubochycfo.supabase.co`
-- Publishable key: incluida en `supabase-config.js`
+Usa **Anonymous Sign-Ins** de Supabase, que crea un usuario autenticado con UUID y sesión
+sin pedir email, teléfono ni proveedor externo.
 
-La publishable key es una clave de cliente. **No añadas nunca una Secret key o service_role al proyecto web.**
+## PASO 1 — Ejecutar el parche SQL
 
-## 1. Crear la base de datos
+En Supabase:
 
-1. En Supabase abre tu proyecto.
-2. Ve a **SQL Editor**.
-3. Pulsa **New query**.
-4. Abre el archivo `supabase_setup.sql` de este ZIP.
-5. Copia todo el contenido.
-6. Pégalo en el SQL Editor.
-7. Pulsa **Run**.
+1. SQL Editor.
+2. New query.
+3. Abre `supabase_v9_5_auth_patch.sql`.
+4. Copia todo.
+5. Run.
 
-Eso crea:
+No necesitas borrar las tablas existentes.
 
-- perfiles,
-- seguidores,
-- amistad por seguimiento mutuo,
-- publicaciones,
-- privacidad público / amigos / privado,
-- likes únicos,
-- comentarios,
-- colección,
-- proyectos,
-- wishlist,
-- bucket para avatar y banner,
-- políticas RLS.
+## PASO 2 — Activar usuarios anónimos
 
-## 2. Imprescindible para registro sin correo
+En la configuración de **Authentication** de Supabase activa:
 
-PILE OF SHAME oculta completamente el email al usuario y usa internamente una identidad técnica derivada del `@usuario`.
+**Allow anonymous sign-ins**
 
-En Supabase entra en:
+No necesitas tocar Confirm Email para esta versión.
 
-**Authentication → Providers → Email**
+## Cómo funciona ahora
 
-y **desactiva `Confirm Email`**.
-
-Sin eso, Supabase intentará verificar una dirección que el usuario nunca ha proporcionado y el registro no podrá iniciar sesión inmediatamente.
-
-## 3. Probar
-
-Sirve la carpeta por HTTP; no abras `index.html` con doble clic.
-
-En Windows:
-
-```bash
-python -m http.server 8080
-```
-
-Abre:
-
-```text
-http://localhost:8080
-```
-
-Crea una primera cuenta:
+### Crear perfil
+El usuario introduce únicamente:
 
 - Nombre
 - @usuario
-- contraseña
 
-No pide correo ni teléfono.
+Supabase crea una sesión anónima autenticada.
 
-## 4. Probar la parte social
+La app genera automáticamente un secreto aleatorio de recuperación de 256 bits y descarga:
 
-Para comprobar seguidores/amigos:
+`PILE_OF_SHAME_RECOVERY_tuusuario.json`
 
-1. Crea una cuenta.
-2. Cierra sesión.
-3. Crea una segunda cuenta distinta.
-4. En **Explorar**, sigue a la primera.
-5. Vuelve a la primera y síguela también.
-6. Ahora ambas aparecerán como **Amigos**.
-7. Una publicación marcada `Amigos` solo será visible con seguimiento mutuo.
+Guárdalo.
 
-## 5. Backup
+### Uso normal
+Mientras el navegador conserve la sesión, al abrir la app se entra automáticamente.
 
-En **Ajustes → Cuenta y copia de seguridad** puedes exportar un JSON con:
+### Recuperar cuenta
+Si cambias de dispositivo, borras los datos del navegador o pierdes la sesión:
 
-- perfil,
-- publicaciones propias,
-- colección,
-- proyectos,
-- wishlist,
-- usuarios seguidos.
+1. Abres PILE OF SHAME.
+2. Pulsa **Recuperar**.
+3. Selecciona el archivo de recuperación.
+4. La app crea una sesión nueva y transfiere a ella el perfil y los datos de la cuenta antigua.
 
-La restauración está pensada para recuperar **tus datos** dentro de una cuenta nueva. En esta fase no recupera automáticamente la contraseña ni reclama el mismo `@usuario` de una cuenta perdida.
+### Backup completo
+Ajustes sigue permitiendo exportar un backup completo. Desde V9.5 también incluye
+la información de recuperación necesaria.
 
-## Qué está conectado en V9
-
-- Registro y login reales.
-- Perfil real.
-- Foto y banner reales en Supabase Storage.
-- Seguidores reales.
-- Amigos = seguimiento mutuo.
-- Feed real.
-- Privacidad aplicada también por RLS.
-- Like real con máximo uno por usuario.
-- Colección real.
-- Materiales de hobby reales.
-- Backup de datos.
-
-## Lo que queda para la siguiente fase
-
-- Fotos en publicaciones.
-- Comentarios con interfaz completa.
-- Notificaciones reales/push.
-- Proyectos completos.
-- Wishlist completa.
-- Ver el perfil/colección de otra persona al pulsar su usuario.
-
-
-## Si venías de V9 y te salía “No se puede comprobar el usuario”
-
-Ejecuta de nuevo **todo** el archivo `supabase_setup.sql` de esta V9.1.
-
-El script usa `create table if not exists`, `create or replace` y recrea las
-políticas de forma segura, así que puedes ejecutarlo aunque ya hubieras probado
-la V9.
-
-La V9.1 además ya no consulta `profiles` antes del registro: deja que PostgreSQL
-controle directamente si el `@usuario` es único.
-
-
-## Corrección V9.2 — dominio técnico de Auth
-
-La V9.1 usaba internamente `@pileofshame.invalid`. Supabase Auth rechaza ese
-TLD reservado como dirección inválida.
-
-La V9.2 usa internamente:
-
-`@users.pileofshame.app`
-
-El usuario sigue viendo únicamente nombre, @usuario y contraseña.
-No se solicita correo real. Mantén **Confirm Email desactivado** en Supabase.
+## Importante
+No pulses "Salir de este dispositivo" sin tener guardada una copia de recuperación.

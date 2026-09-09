@@ -10,7 +10,7 @@
   <title>PILE OF SHAME</title>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="apple-touch-icon" href="./assets/app-icon.png" />
-  <link rel="stylesheet" href="./styles.css?v=9.4" />
+  <link rel="stylesheet" href="./styles.css?v=9.5" />
 </head>
 <body data-theme="40k">
 
@@ -22,21 +22,11 @@
       </div>
 
       <div class="auth-tabs">
-        <button type="button" class="auth-tab active" data-auth-tab="login" aria-selected="true">Entrar</button>
-        <button type="button" class="auth-tab" data-auth-tab="signup" aria-selected="false">Crear cuenta</button>
+        <button type="button" class="auth-tab active" data-auth-tab="signup" aria-selected="true">Crear perfil</button>
+        <button type="button" class="auth-tab" data-auth-tab="restore" aria-selected="false">Recuperar</button>
       </div>
 
-      <form id="loginForm" class="auth-form active" data-auth-view="login" style="display:grid !important" aria-hidden="false">
-        <label>@usuario
-          <input name="handle" autocomplete="username" placeholder="@gretchinqueen" required>
-        </label>
-        <label>Contraseña
-          <input name="password" type="password" autocomplete="current-password" minlength="6" required>
-        </label>
-        <button class="primary-btn" type="submit">Entrar en la pila</button>
-      </form>
-
-      <form id="signupForm" class="auth-form" data-auth-view="signup" hidden aria-hidden="true" style="display:none !important">
+      <form id="signupForm" class="auth-form active" data-auth-view="signup" style="display:grid !important" aria-hidden="false">
         <label>Nombre
           <input name="name" maxlength="30" placeholder="Elena" required>
         </label>
@@ -44,18 +34,21 @@
           <input name="handle" maxlength="24" autocomplete="username" placeholder="@gretchinqueen" required>
           <small>3–24 caracteres: letras, números y _</small>
         </label>
-        <label>Contraseña
-          <input name="password" type="password" autocomplete="new-password" minlength="6" required>
+        <button class="primary-btn" type="submit">Crear mi perfil</button>
+      </form>
+
+      <form id="restoreForm" class="auth-form" data-auth-view="restore" hidden aria-hidden="true" style="display:none !important">
+        <label>Copia de recuperación
+          <input id="restoreFile" name="restoreFile" type="file" accept="application/json,.json" required>
+          <small>Selecciona el archivo de recuperación o un backup de PILE OF SHAME.</small>
         </label>
-        <label>Repite la contraseña
-          <input name="password2" type="password" autocomplete="new-password" minlength="6" required>
-        </label>
-        <button class="primary-btn" type="submit">Crear cuenta</button>
+        <button class="primary-btn" type="submit">Recuperar mi cuenta</button>
       </form>
 
       <div id="authMessage" class="auth-message" role="status"></div>
       <p class="auth-note">
-        No pedimos correo ni teléfono. Guarda copias de seguridad de tus datos desde Ajustes.
+        No pedimos correo ni teléfono. Si ya tienes sesión en este dispositivo, entrarás automáticamente.
+        Guarda tu archivo de recuperación en un lugar seguro.
       </p>
     </section>
   </div>
@@ -193,7 +186,7 @@
       </div>
     </div>
     <div class="settings-block">
-      <button id="logoutBtn" class="secondary-btn">Cerrar sesión</button>
+      <button id="logoutBtn" class="secondary-btn">Salir de este dispositivo</button>
     </div>
 
   </dialog>
@@ -237,6 +230,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="./app.js?v=9.4"></script>
+  <script type="module" src="./app.js?v=9.5"></script>
 </body>
 </html>

@@ -16,6 +16,7 @@ create table if not exists public.profiles (
   favorite_faction text not null default 'none',
   avatar_url text not null default '',
   banner_url text not null default '',
+  recovery_hash text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint profiles_handle_format check (handle ~ '^[a-z0-9_]{3,24}$')
@@ -47,8 +48,13 @@ begin
     new_name := new_handle;
   end if;
 
-  insert into public.profiles (id, handle, display_name)
-  values (new.id, new_handle, new_name);
+  insert into public.profiles (id, handle, display_name, recovery_hash)
+  values (
+    new.id,
+    new_handle,
+    new_name,
+    coalesce(new.raw_user_meta_data ->> 'recovery_hash', '')
+  );
 
   return new;
 end;
@@ -371,6 +377,89 @@ grant select, insert, delete on public.comments to authenticated;
 grant select, insert, update, delete on public.collection_items to authenticated;
 grant select, insert, update, delete on public.projects to authenticated;
 grant select, insert, update, delete on public.wishlist_items to authenticated;
+
+create or replace function public.recover_account(
+  p_handle text,
+  p_secret text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_new_id uuid := auth.uid();
+  v_old public.profiles%rowtype;
+  v_normalized_handle text;
+  v_hash text;
+  v_temp_handle text;
+begin
+  if v_new_id is null then
+    raise exception 'Authentication required';
+  end if;
+
+  v_normalized_handle := lower(regexp_replace(coalesce(p_handle, ''), '[^a-z0-9_]', '', 'g'));
+
+  select *
+  into v_old
+  from public.profiles
+  where lower(handle) = v_normalized_handle
+  limit 1;
+
+  if not found then
+    return false;
+  end if;
+
+  if v_old.id = v_new_id then
+    return true;
+  end if;
+
+  v_hash := encode(digest(coalesce(p_secret, ''), 'sha256'), 'hex');
+
+  if v_old.recovery_hash = '' or v_old.recovery_hash <> v_hash then
+    return false;
+  end if;
+
+  -- Libera el @usuario mientras movemos la propiedad.
+  v_temp_handle := 'recovered_' || substr(v_old.id::text, 1, 8);
+  update public.profiles
+  set handle = v_temp_handle
+  where id = v_old.id;
+
+  -- Mueve todo el contenido social y personal.
+  update public.posts set user_id = v_new_id where user_id = v_old.id;
+  update public.collection_items set user_id = v_new_id where user_id = v_old.id;
+  update public.projects set user_id = v_new_id where user_id = v_old.id;
+  update public.wishlist_items set user_id = v_new_id where user_id = v_old.id;
+  update public.comments set user_id = v_new_id where user_id = v_old.id;
+  update public.post_likes set user_id = v_new_id where user_id = v_old.id;
+
+  update public.follows set follower_id = v_new_id where follower_id = v_old.id;
+  update public.follows set following_id = v_new_id where following_id = v_old.id;
+
+  -- Convierte el perfil temporal de recuperación en el perfil original.
+  update public.profiles
+  set
+    handle = v_normalized_handle,
+    display_name = v_old.display_name,
+    bio = v_old.bio,
+    favorite_faction = v_old.favorite_faction,
+    avatar_url = v_old.avatar_url,
+    banner_url = v_old.banner_url,
+    recovery_hash = v_old.recovery_hash,
+    updated_at = now()
+  where id = v_new_id;
+
+  delete from public.profiles where id = v_old.id;
+
+  return true;
+end;
+$$;
+
+revoke all on function public.recover_account(text, text) from public;
+grant execute on function public.recover_account(text, text) to authenticated;
+
+
 
 -- ---------- PUBLIC PROFILE MEDIA ----------
 insert into storage.buckets (id, name, public)

@@ -1278,3 +1278,22 @@ body[data-theme="fantasy"] .add-accordion{
 /* V9.4 — Safari auth hardening */
 #loginForm[hidden], #signupForm[hidden]{display:none !important;}
 #loginForm.active:not([hidden]), #signupForm.active:not([hidden]){display:grid !important;}
+
+
+/* =========================================================
+   V9.5 — AUTH SIN CORREO / TELÉFONO
+   ========================================================= */
+
+.auth-recovery-warning{
+  border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));
+  background:color-mix(in srgb,var(--accent) 7%,var(--surface-2));
+  border-radius:10px;
+  padding:10px;
+  color:var(--muted);
+  font-size:.72rem;
+  line-height:1.45;
+}
+
+.auth-form[hidden]{
+  display:none !important;
+}
