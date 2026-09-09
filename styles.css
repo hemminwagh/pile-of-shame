@@ -1273,3 +1273,8 @@ body[data-theme="fantasy"] .add-accordion{
   background:transparent;
   color:var(--muted);
 }
+
+
+/* V9.4 — Safari auth hardening */
+#loginForm[hidden], #signupForm[hidden]{display:none !important;}
+#loginForm.active:not([hidden]), #signupForm.active:not([hidden]){display:grid !important;}

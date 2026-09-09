@@ -1,4 +1,4 @@
-# PILE OF SHAME — V9.3 Auth UI Fix
+# PILE OF SHAME — V9.4 Auth + Cache Fix
 
 Prototipo visual funcional de la PWA.
 
@@ -160,3 +160,11 @@ Lee primero `SETUP_SUPABASE.md` y ejecuta `supabase_setup.sql` antes de probar e
 - Los campos del formulario inactivo quedan deshabilitados.
 - Se fuerza el estado inicial a Entrar.
 - No es necesario volver a ejecutar el SQL.
+
+
+## V9.4
+- El cambio Entrar / Crear cuenta fuerza `display` inline con `!important`.
+- Assets con cache-busting `?v=9.4`.
+- Service Worker en modo network-first durante desarrollo.
+- Incluye `reset-cache.html` para eliminar caches/service workers antiguos sin borrar los datos locales.
+- No hace falta repetir el SQL.

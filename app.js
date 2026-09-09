@@ -1,5 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./supabase-config.js";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./supabase-config.js?v=9.4";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
@@ -1008,6 +1008,10 @@ function setAuthTab(tab){
     form.classList.toggle("active",active);
     form.setAttribute("aria-hidden",active ? "false" : "true");
 
+    // Forzamos display inline con !important para que ningún CSS cacheado pueda
+    // volver a mostrar ambos formularios a la vez en Safari.
+    form.style.setProperty("display", active ? "grid" : "none", "important");
+
     // Un formulario inactivo ni se ve ni participa en validación/autofill/submit.
     form.querySelectorAll("input, textarea, select, button").forEach(control=>{
       control.disabled=!active;
@@ -1238,7 +1242,9 @@ async function init(){
 
   if("serviceWorker" in navigator){
     window.addEventListener("load",()=>{
-      navigator.serviceWorker.register("./sw.js").catch(()=>{});
+      navigator.serviceWorker.register("./sw.js", {updateViaCache:"none"})
+        .then(registration=>registration.update())
+        .catch(()=>{});
     });
   }
 }

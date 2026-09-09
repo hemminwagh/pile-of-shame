@@ -1,11 +1,10 @@
-
-const CACHE="pile-of-shame-v9-3-shell";
+const CACHE="pile-of-shame-v9-4-shell";
 const ASSETS=[
   "./",
   "./index.html",
-  "./styles.css",
-  "./app.js",
-  "./supabase-config.js",
+  "./styles.css?v=9.4",
+  "./app.js?v=9.4",
+  "./supabase-config.js?v=9.4",
   "./manifest.webmanifest",
   "./assets/app-icon.png"
 ];
@@ -22,16 +21,19 @@ self.addEventListener("activate",event=>{
   self.clients.claim();
 });
 
+// Durante desarrollo preferimos RED antes que caché. Así GitHub Pages muestra
+// la versión recién subida y el caché queda solo como respaldo offline.
 self.addEventListener("fetch",event=>{
   if(event.request.method!=="GET") return;
   event.respondWith(
-    caches.match(event.request).then(cached=>{
-      const network=fetch(event.request).then(response=>{
+    fetch(event.request).then(response=>{
+      if(response && response.ok){
         const copy=response.clone();
         caches.open(CACHE).then(cache=>cache.put(event.request,copy));
-        return response;
-      }).catch(()=>cached||caches.match("./index.html"));
-      return cached || network;
+      }
+      return response;
+    }).catch(async()=>{
+      return (await caches.match(event.request)) || (await caches.match("./index.html"));
     })
   );
 });

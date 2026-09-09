@@ -10,7 +10,7 @@
   <title>PILE OF SHAME</title>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="apple-touch-icon" href="./assets/app-icon.png" />
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=9.4" />
 </head>
 <body data-theme="40k">
 
@@ -26,7 +26,7 @@
         <button type="button" class="auth-tab" data-auth-tab="signup" aria-selected="false">Crear cuenta</button>
       </div>
 
-      <form id="loginForm" class="auth-form active" data-auth-view="login">
+      <form id="loginForm" class="auth-form active" data-auth-view="login" style="display:grid !important" aria-hidden="false">
         <label>@usuario
           <input name="handle" autocomplete="username" placeholder="@gretchinqueen" required>
         </label>
@@ -36,7 +36,7 @@
         <button class="primary-btn" type="submit">Entrar en la pila</button>
       </form>
 
-      <form id="signupForm" class="auth-form" data-auth-view="signup" hidden aria-hidden="true">
+      <form id="signupForm" class="auth-form" data-auth-view="signup" hidden aria-hidden="true" style="display:none !important">
         <label>Nombre
           <input name="name" maxlength="30" placeholder="Elena" required>
         </label>
@@ -237,6 +237,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=9.4"></script>
 </body>
 </html>
