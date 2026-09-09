@@ -1,4 +1,4 @@
-# PILE OF SHAME V9.1 — Conectar Supabase
+# PILE OF SHAME V9.2 — Conectar Supabase
 
 Tu proyecto ya viene configurado para:
 
@@ -127,3 +127,16 @@ la V9.
 
 La V9.1 además ya no consulta `profiles` antes del registro: deja que PostgreSQL
 controle directamente si el `@usuario` es único.
+
+
+## Corrección V9.2 — dominio técnico de Auth
+
+La V9.1 usaba internamente `@pileofshame.invalid`. Supabase Auth rechaza ese
+TLD reservado como dirección inválida.
+
+La V9.2 usa internamente:
+
+`@users.pileofshame.app`
+
+El usuario sigue viendo únicamente nombre, @usuario y contraseña.
+No se solicita correo real. Mantén **Confirm Email desactivado** en Supabase.

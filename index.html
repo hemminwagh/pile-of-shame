@@ -22,11 +22,11 @@
       </div>
 
       <div class="auth-tabs">
-        <button class="auth-tab active" data-auth-tab="login">Entrar</button>
-        <button class="auth-tab" data-auth-tab="signup">Crear cuenta</button>
+        <button type="button" class="auth-tab active" data-auth-tab="login" aria-selected="true">Entrar</button>
+        <button type="button" class="auth-tab" data-auth-tab="signup" aria-selected="false">Crear cuenta</button>
       </div>
 
-      <form id="loginForm" class="auth-form">
+      <form id="loginForm" class="auth-form active" data-auth-view="login">
         <label>@usuario
           <input name="handle" autocomplete="username" placeholder="@gretchinqueen" required>
         </label>
@@ -36,7 +36,7 @@
         <button class="primary-btn" type="submit">Entrar en la pila</button>
       </form>
 
-      <form id="signupForm" class="auth-form" hidden>
+      <form id="signupForm" class="auth-form" data-auth-view="signup" hidden aria-hidden="true">
         <label>Nombre
           <input name="name" maxlength="30" placeholder="Elena" required>
         </label>

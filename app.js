@@ -70,7 +70,9 @@ function normalizeHandle(raw=""){
     .replace(/[^a-z0-9_]/g,"");
 }
 function credentialEmail(handle){
-  return `${normalizeHandle(handle)}@pileofshame.invalid`;
+  // Dirección técnica interna para Supabase Auth.
+  // El usuario nunca la ve ni tiene que introducir un email real.
+  return `${normalizeHandle(handle)}@users.pileofshame.app`;
 }
 function displayHandle(handle=""){
   const h=normalizeHandle(handle);
@@ -991,11 +993,27 @@ async function importBackup(file){
 }
 
 function setAuthTab(tab){
+  const validTab=tab==="signup" ? "signup" : "login";
+
   document.querySelectorAll("[data-auth-tab]").forEach(btn=>{
-    btn.classList.toggle("active",btn.dataset.authTab===tab);
+    const selected=btn.dataset.authTab===validTab;
+    btn.classList.toggle("active",selected);
+    btn.setAttribute("aria-selected",selected ? "true" : "false");
   });
-  document.getElementById("loginForm").hidden=tab!=="login";
-  document.getElementById("signupForm").hidden=tab!=="signup";
+
+  document.querySelectorAll("[data-auth-view]").forEach(form=>{
+    const active=form.dataset.authView===validTab;
+
+    form.hidden=!active;
+    form.classList.toggle("active",active);
+    form.setAttribute("aria-hidden",active ? "false" : "true");
+
+    // Un formulario inactivo ni se ve ni participa en validación/autofill/submit.
+    form.querySelectorAll("input, textarea, select, button").forEach(control=>{
+      control.disabled=!active;
+    });
+  });
+
   setAuthMessage("");
 }
 
@@ -1188,6 +1206,7 @@ async function init(){
   populateFactionSelect();
   setTheme(getTheme(),false);
   bindStaticEvents();
+  setAuthTab("login");
 
   const {data:{session},error}=await supabase.auth.getSession();
   if(error) console.error(error);

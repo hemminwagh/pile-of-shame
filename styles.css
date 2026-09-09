@@ -1244,3 +1244,32 @@ body[data-theme="fantasy"] .add-accordion{
   .auth-panel{padding:15px}
   .auth-logo{max-height:82px}
 }
+
+
+/* =========================================================
+   V9.3 — FIX PANTALLA ENTRAR / REGISTRO
+   ========================================================= */
+
+/* El CSS anterior daba display:grid a .auth-form y algunos navegadores
+   podían acabar mostrando también el formulario con [hidden]. */
+.auth-form[hidden]{
+  display:none !important;
+}
+
+.auth-form{
+  display:none;
+}
+
+.auth-form.active{
+  display:grid;
+}
+
+.auth-tab[aria-selected="true"]{
+  background:color-mix(in srgb,var(--accent) 12%,var(--surface));
+  color:var(--accent-2);
+}
+
+.auth-tab[aria-selected="false"]{
+  background:transparent;
+  color:var(--muted);
+}

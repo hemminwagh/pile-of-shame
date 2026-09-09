@@ -1,4 +1,4 @@
-# PILE OF SHAME — V9.1 Supabase Fix
+# PILE OF SHAME — V9.3 Auth UI Fix
 
 Prototipo visual funcional de la PWA.
 
@@ -146,3 +146,17 @@ Lee primero `SETUP_SUPABASE.md` y ejecuta `supabase_setup.sql` antes de probar e
 - Eliminada la comprobación anónima previa del @usuario.
 - Añadidos permisos SQL explícitos para `anon` y `authenticated`.
 - Mensajes de error de registro más claros.
+
+
+## V9.2
+- Corregido el dominio técnico usado por Supabase Auth.
+- Ya no se usa el TLD reservado `.invalid`.
+- No hace falta volver a ejecutar el SQL si V9.1 ya estaba instalado.
+
+
+## V9.3
+- Corregido el solapamiento entre Entrar y Crear cuenta.
+- Solo un formulario puede mostrarse a la vez.
+- Los campos del formulario inactivo quedan deshabilitados.
+- Se fuerza el estado inicial a Entrar.
+- No es necesario volver a ejecutar el SQL.
